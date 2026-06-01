@@ -91,3 +91,59 @@ async function generarPaginaConsolidadaArbol(originalTitle, rootNode) {
     
     window.roamAlphaAPI.ui.mainWindow.openPage({page: {uid: newPageUid}});
 }
+
+let cacheCasos = null;
+let cacheCodebook = null;
+
+function obtenerCasosGlobal() {
+    if (cacheCasos) return cacheCasos;
+    const res = window.roamAlphaAPI.q(`
+        [:find ?title 
+         :where 
+         [?p :node/title ?title] 
+         [(clojure.string/starts-with? ?title "entrevistadx/")]]
+    `);
+    cacheCasos = res.map(r => r[0]).sort();
+    return cacheCasos;
+}
+
+function obtenerCodebookGlobal() {
+    if (cacheCodebook) return cacheCodebook;
+    
+    // In Roam Datalog, the or clause must be grouped properly, or we can just fetch all pages and filter in JS if it's faster,
+    // but a query with OR is efficient enough. Let's use a simple query finding all titles and filtering in JS to avoid Datalog complex syntax issues, since JS filter is extremely fast on thousands of strings.
+    const res = window.roamAlphaAPI.q(`[:find ?title :where [?p :node/title ?title]]`);
+    
+    const allTitles = res.map(r => r[0] || "");
+    
+    const grouped = {
+        "dom": [],
+        "dim": [],
+        "cat": [],
+        "cod": [],
+        "memo": []
+    };
+    
+    allTitles.forEach(title => {
+        if (title.startsWith("dom/")) grouped["dom"].push(title);
+        else if (title.startsWith("dim/")) grouped["dim"].push(title);
+        else if (title.startsWith("cat/")) grouped["cat"].push(title);
+        else if (title.startsWith("cod/")) grouped["cod"].push(title);
+        else if (title.startsWith("memo/")) grouped["memo"].push(title);
+    });
+    
+    for (const key in grouped) {
+        grouped[key].sort();
+    }
+    
+    cacheCodebook = grouped;
+    return cacheCodebook;
+}
+
+function refrescarCachesGlobales() {
+    cacheCasos = null;
+    cacheCodebook = null;
+    obtenerCasosGlobal();
+    obtenerCodebookGlobal();
+}
+

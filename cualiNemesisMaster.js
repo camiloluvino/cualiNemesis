@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.2.1 - Last Updated: 2026-05-31 20:49:59
+﻿// CualiNemesis v0.3.0 - Last Updated: 2026-05-31 21:22:12
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -114,6 +114,62 @@ async function generarPaginaConsolidadaArbol(originalTitle, rootNode) {
     
     window.roamAlphaAPI.ui.mainWindow.openPage({page: {uid: newPageUid}});
 }
+
+let cacheCasos = null;
+let cacheCodebook = null;
+
+function obtenerCasosGlobal() {
+    if (cacheCasos) return cacheCasos;
+    const res = window.roamAlphaAPI.q(`
+        [:find ?title 
+         :where 
+         [?p :node/title ?title] 
+         [(clojure.string/starts-with? ?title "entrevistadx/")]]
+    `);
+    cacheCasos = res.map(r => r[0]).sort();
+    return cacheCasos;
+}
+
+function obtenerCodebookGlobal() {
+    if (cacheCodebook) return cacheCodebook;
+    
+    // In Roam Datalog, the or clause must be grouped properly, or we can just fetch all pages and filter in JS if it's faster,
+    // but a query with OR is efficient enough. Let's use a simple query finding all titles and filtering in JS to avoid Datalog complex syntax issues, since JS filter is extremely fast on thousands of strings.
+    const res = window.roamAlphaAPI.q(`[:find ?title :where [?p :node/title ?title]]`);
+    
+    const allTitles = res.map(r => r[0] || "");
+    
+    const grouped = {
+        "dom": [],
+        "dim": [],
+        "cat": [],
+        "cod": [],
+        "memo": []
+    };
+    
+    allTitles.forEach(title => {
+        if (title.startsWith("dom/")) grouped["dom"].push(title);
+        else if (title.startsWith("dim/")) grouped["dim"].push(title);
+        else if (title.startsWith("cat/")) grouped["cat"].push(title);
+        else if (title.startsWith("cod/")) grouped["cod"].push(title);
+        else if (title.startsWith("memo/")) grouped["memo"].push(title);
+    });
+    
+    for (const key in grouped) {
+        grouped[key].sort();
+    }
+    
+    cacheCodebook = grouped;
+    return cacheCodebook;
+}
+
+function refrescarCachesGlobales() {
+    cacheCasos = null;
+    cacheCodebook = null;
+    obtenerCasosGlobal();
+    obtenerCodebookGlobal();
+}
+
 
 
 // File: core/extractor.js
@@ -362,9 +418,8 @@ function crearInterfazModal(rootNode, pageTitle) {
             background: #ffffff;
             padding: 24px;
             border-radius: 12px;
-            width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
+            width: 700px;
+            max-height: 85vh;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             border: 1px solid #e2e8f0;
             display: flex;
@@ -376,13 +431,85 @@ function crearInterfazModal(rootNode, pageTitle) {
             color: #1a202c;
             margin-top: 0;
             margin-bottom: 12px;
-            border-bottom: 1px solid #edf2f7;
-            padding-bottom: 10px;
         }
+        
+        /* Tabs Styles */
+        .cuali-tabs {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 16px;
+        }
+        .cuali-tab-btn {
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: #718096;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 8px;
+        }
+        .cuali-tab-btn:hover {
+            color: #2d3748;
+        }
+        .cuali-tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        .cuali-tab-content {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+        .cuali-tab-content.active {
+            display: flex;
+        }
+        
+        /* Lists and Trees */
+        .cuali-list-box {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            overflow-y: auto;
+            flex: 1;
+            max-height: 50vh;
+        }
+        .cuali-list-item {
+            padding: 6px 8px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 14px;
+            color: #2d3748;
+        }
+        .cuali-list-item:last-child {
+            border-bottom: none;
+        }
+        .cuali-group-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: #a0aec0;
+            text-transform: uppercase;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            letter-spacing: 0.05em;
+        }
+        .cuali-group-title:first-child {
+            margin-top: 0;
+        }
+        
+        /* Toolbar */
         .cuali-toolbar {
             display: flex;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 12px;
+        }
+        .cuali-toolbar-left {
+            display: flex;
+            gap: 8px;
         }
         .cuali-btn-tool {
             padding: 4px 10px;
@@ -399,20 +526,13 @@ function crearInterfazModal(rootNode, pageTitle) {
             background: #e2e8f0;
             color: #2d3748;
         }
-        .cuali-tree-container {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            padding: 12px;
-            background: #f7fafc;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            max-height: 50vh;
-        }
+        
+        /* Bottom Buttons */
         .cuali-buttons {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
+            margin-top: 16px;
         }
         .cuali-btn {
             padding: 8px 16px;
@@ -470,25 +590,45 @@ function crearInterfazModal(rootNode, pageTitle) {
     
     const header = document.createElement("h3");
     header.className = "cuali-header";
-    header.innerText = "Selecciona los códigos a consolidar (Árbol)";
+    header.innerText = "Dispositivo Analítico: CualiNemesis";
     modal.appendChild(header);
 
-    const treeContainer = document.createElement("div");
-    treeContainer.className = "cuali-tree-container";
+    // Build Tabs Navigation
+    const tabsNav = document.createElement("div");
+    tabsNav.className = "cuali-tabs";
     
-    const rootUl = document.createElement("ul");
-    rootUl.style.paddingLeft = "0";
-    rootUl.style.margin = "0";
+    const btnTabExportacion = document.createElement("button");
+    btnTabExportacion.className = "cuali-tab-btn active";
+    btnTabExportacion.innerText = "Exportación Contextual";
     
-    const childNamesSorted = Object.keys(rootNode.children).sort();
-    childNamesSorted.forEach(childName => {
-        rootUl.appendChild(renderNodeHTML(rootNode.children[childName]));
-    });
-    treeContainer.appendChild(rootUl);
+    const btnTabCasos = document.createElement("button");
+    btnTabCasos.className = "cuali-tab-btn";
+    btnTabCasos.innerText = "Casos (Empírico)";
+    
+    const btnTabCodebook = document.createElement("button");
+    btnTabCodebook.className = "cuali-tab-btn";
+    btnTabCodebook.innerText = "Codificación (Analítico)";
+    
+    tabsNav.appendChild(btnTabExportacion);
+    tabsNav.appendChild(btnTabCasos);
+    tabsNav.appendChild(btnTabCodebook);
+    modal.appendChild(tabsNav);
 
-    // Toolbar
+    // Tab Contents Containers
+    const tabExportacion = document.createElement("div");
+    tabExportacion.className = "cuali-tab-content active";
+    
+    const tabCasos = document.createElement("div");
+    tabCasos.className = "cuali-tab-content";
+    
+    const tabCodebook = document.createElement("div");
+    tabCodebook.className = "cuali-tab-content";
+
+    // --- POPULATE TAB: EXPORTACION ---
     const toolbar = document.createElement("div");
     toolbar.className = "cuali-toolbar";
+    const toolbarLeft = document.createElement("div");
+    toolbarLeft.className = "cuali-toolbar-left";
 
     const btnExpandAll = document.createElement("button");
     btnExpandAll.className = "cuali-btn-tool";
@@ -516,37 +656,43 @@ function crearInterfazModal(rootNode, pageTitle) {
         toggles.forEach(toggle => toggle.innerText = "▶ ");
     };
 
-    toolbar.appendChild(btnExpandAll);
-    toolbar.appendChild(btnCollapseAll);
+    toolbarLeft.appendChild(btnExpandAll);
+    toolbarLeft.appendChild(btnCollapseAll);
+    toolbar.appendChild(toolbarLeft);
+    tabExportacion.appendChild(toolbar);
 
-    modal.appendChild(toolbar);
-    modal.appendChild(treeContainer);
-
-    const btnContainer = document.createElement("div");
-    btnContainer.className = "cuali-buttons";
+    const treeContainer = document.createElement("div");
+    treeContainer.className = "cuali-list-box";
     
-    const btnCancel = document.createElement("button");
-    btnCancel.className = "cuali-btn cuali-btn-cancel";
-    btnCancel.innerText = "Cancelar";
-    btnCancel.onclick = (e) => {
-        e.preventDefault();
-        document.body.removeChild(overlay);
-    };
-
+    const rootUl = document.createElement("ul");
+    rootUl.style.paddingLeft = "0";
+    rootUl.style.margin = "0";
+    
+    if (rootNode && Object.keys(rootNode.children).length > 0) {
+        const childNamesSorted = Object.keys(rootNode.children).sort();
+        childNamesSorted.forEach(childName => {
+            rootUl.appendChild(renderNodeHTML(rootNode.children[childName]));
+        });
+    } else {
+        rootUl.innerHTML = "<li style='color: #a0aec0; padding: 10px;'>No hay códigos en la página activa.</li>";
+    }
+    
+    treeContainer.appendChild(rootUl);
+    tabExportacion.appendChild(treeContainer);
+    
+    const exportButtons = document.createElement("div");
+    exportButtons.className = "cuali-buttons";
+    
     const btnClipboard = document.createElement("button");
     btnClipboard.className = "cuali-btn cuali-btn-clipboard";
     btnClipboard.innerText = "Copiar al portapapeles";
-    
     btnClipboard.onclick = async (e) => {
         e.preventDefault();
-        
-        if (!nodoSeleccionadoOHijosSeleccionados(rootNode)) {
+        if (!rootNode || !nodoSeleccionadoOHijosSeleccionados(rootNode)) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
         }
-        
         const clipboardText = generarTextoPortapapeles(rootNode);
-
         try {
             await navigator.clipboard.writeText(clipboardText.trim());
             mostrarNotificacion("Códigos copiados en formato árbol.");
@@ -554,32 +700,157 @@ function crearInterfazModal(rootNode, pageTitle) {
             mostrarNotificacion("Error al copiar al portapapeles.");
             console.error(err);
         }
-        
-        document.body.removeChild(overlay);
     };
     
     const btnPage = document.createElement("button");
     btnPage.className = "cuali-btn cuali-btn-page";
     btnPage.innerText = "Crear nueva página";
-    
     btnPage.onclick = async (e) => {
         e.preventDefault();
-        
-        if (!nodoSeleccionadoOHijosSeleccionados(rootNode)) {
+        if (!rootNode || !nodoSeleccionadoOHijosSeleccionados(rootNode)) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
         }
-        
         document.body.removeChild(overlay);
         await generarPaginaConsolidadaArbol(pageTitle, rootNode);
     };
 
-    btnContainer.appendChild(btnCancel);
-    btnContainer.appendChild(btnClipboard);
-    btnContainer.appendChild(btnPage);
-    modal.appendChild(btnContainer);
+    exportButtons.appendChild(btnClipboard);
+    exportButtons.appendChild(btnPage);
+    tabExportacion.appendChild(exportButtons);
+
+    // --- POPULATE TAB: CASOS ---
+    const toolbarCasos = document.createElement("div");
+    toolbarCasos.className = "cuali-toolbar";
+    toolbarCasos.style.justifyContent = "flex-end";
+    
+    const btnRefreshCasos = document.createElement("button");
+    btnRefreshCasos.className = "cuali-btn-tool";
+    btnRefreshCasos.innerText = "🔄 Refrescar Listas";
+    btnRefreshCasos.onclick = (e) => {
+        e.preventDefault();
+        refrescarCachesGlobales();
+        renderTabCasos();
+        renderTabCodebook();
+        mostrarNotificacion("Listas refrescadas exitosamente.");
+    };
+    toolbarCasos.appendChild(btnRefreshCasos);
+    tabCasos.appendChild(toolbarCasos);
+
+    const listCasosContainer = document.createElement("div");
+    listCasosContainer.className = "cuali-list-box";
+    tabCasos.appendChild(listCasosContainer);
+
+    function renderTabCasos() {
+        listCasosContainer.innerHTML = "";
+        const casos = obtenerCasosGlobal();
+        if (casos.length === 0) {
+            listCasosContainer.innerHTML = "<div class='cuali-list-item' style='color: #a0aec0;'>No se encontraron casos (páginas que inician con entrevistadx/)</div>";
+        } else {
+            casos.forEach(caso => {
+                const item = document.createElement("div");
+                item.className = "cuali-list-item";
+                item.innerText = `📄 ${caso}`;
+                listCasosContainer.appendChild(item);
+            });
+        }
+    }
+
+    // --- POPULATE TAB: CODEBOOK ---
+    const toolbarCodebook = document.createElement("div");
+    toolbarCodebook.className = "cuali-toolbar";
+    toolbarCodebook.style.justifyContent = "flex-end";
+    
+    const btnRefreshCodebook = document.createElement("button");
+    btnRefreshCodebook.className = "cuali-btn-tool";
+    btnRefreshCodebook.innerText = "🔄 Refrescar Listas";
+    btnRefreshCodebook.onclick = btnRefreshCasos.onclick;
+    toolbarCodebook.appendChild(btnRefreshCodebook);
+    tabCodebook.appendChild(toolbarCodebook);
+
+    const listCodebookContainer = document.createElement("div");
+    listCodebookContainer.className = "cuali-list-box";
+    tabCodebook.appendChild(listCodebookContainer);
+
+    function renderTabCodebook() {
+        listCodebookContainer.innerHTML = "";
+        const codebook = obtenerCodebookGlobal();
+        
+        const labels = {
+            "dom": "Dominios (dom/)",
+            "dim": "Dimensiones (dim/)",
+            "cat": "Categorías (cat/)",
+            "cod": "Códigos (cod/)",
+            "memo": "Memos (memo/)"
+        };
+        
+        ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
+            const arr = codebook[key];
+            if (arr.length > 0) {
+                const title = document.createElement("div");
+                title.className = "cuali-group-title";
+                title.innerText = labels[key];
+                listCodebookContainer.appendChild(title);
+                
+                arr.forEach(codItem => {
+                    const item = document.createElement("div");
+                    item.className = "cuali-list-item";
+                    item.innerText = `🏷️ ${codItem}`;
+                    listCodebookContainer.appendChild(item);
+                });
+            }
+        });
+        
+        if (listCodebookContainer.innerHTML === "") {
+            listCodebookContainer.innerHTML = "<div class='cuali-list-item' style='color: #a0aec0;'>No se encontraron elementos en el codebook.</div>";
+        }
+    }
+
+    // Initial Render of Global Tabs
+    renderTabCasos();
+    renderTabCodebook();
+
+    modal.appendChild(tabExportacion);
+    modal.appendChild(tabCasos);
+    modal.appendChild(tabCodebook);
+
+    // Cancel Button at the very bottom (global for the modal)
+    const globalFooter = document.createElement("div");
+    globalFooter.style.display = "flex";
+    globalFooter.style.justifyContent = "flex-start";
+    globalFooter.style.marginTop = "10px";
+    
+    const btnCancelGlobal = document.createElement("button");
+    btnCancelGlobal.className = "cuali-btn cuali-btn-cancel";
+    btnCancelGlobal.innerText = "Cerrar Panel";
+    btnCancelGlobal.onclick = (e) => {
+        e.preventDefault();
+        document.body.removeChild(overlay);
+    };
+    globalFooter.appendChild(btnCancelGlobal);
+    modal.appendChild(globalFooter);
+
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+
+    // Tabs Logic
+    const tabs = [
+        { btn: btnTabExportacion, content: tabExportacion },
+        { btn: btnTabCasos, content: tabCasos },
+        { btn: btnTabCodebook, content: tabCodebook }
+    ];
+
+    tabs.forEach(tab => {
+        tab.btn.onclick = (e) => {
+            e.preventDefault();
+            tabs.forEach(t => {
+                t.btn.classList.remove("active");
+                t.content.classList.remove("active");
+            });
+            tab.btn.classList.add("active");
+            tab.content.classList.add("active");
+        };
+    });
 }
 
 
@@ -598,8 +869,7 @@ function iniciarExtractorCualitativo() {
     const codeMap = procesarBloques(blocks);
 
     if (Object.keys(codeMap).length === 0) {
-        mostrarNotificacion("No se encontraron códigos en esta página.");
-        return;
+        mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
     }
 
     const rootNode = construirArbolCodigos(codeMap);

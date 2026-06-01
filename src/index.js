@@ -12,8 +12,7 @@ function iniciarExtractorCualitativo() {
     const codeMap = procesarBloques(blocks);
 
     if (Object.keys(codeMap).length === 0) {
-        mostrarNotificacion("No se encontraron códigos en esta página.");
-        return;
+        mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
     }
 
     const rootNode = construirArbolCodigos(codeMap);
