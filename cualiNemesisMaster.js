@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.6.0 - Last Updated: 2026-06-01 01:31:35
+﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-01 01:56:31
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -8,13 +8,15 @@ function mostrarNotificacion(mensaje) {
     toast.style.top = "20px";
     toast.style.left = "50%";
     toast.style.transform = "translateX(-50%)";
-    toast.style.backgroundColor = "#333";
-    toast.style.color = "#fff";
+    toast.style.backgroundColor = "#eee8d5";
+    toast.style.color = "#073642";
+    toast.style.border = "1px solid #93a1a1";
     toast.style.padding = "10px 20px";
-    toast.style.borderRadius = "5px";
+    toast.style.borderRadius = "8px";
     toast.style.zIndex = "10000";
-    toast.style.fontFamily = "sans-serif";
-    toast.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+    toast.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    toast.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+    toast.style.transition = "opacity 0.15s ease";
     document.body.appendChild(toast);
     setTimeout(() => document.body.removeChild(toast), 3000);
 }
@@ -351,9 +353,9 @@ function renderNodeHTML(node, hideSources = false) {
     rowDiv.style.alignItems = "center";
     rowDiv.style.justifyContent = "space-between";
     rowDiv.style.width = "100%";
-    rowDiv.style.padding = "4px 8px";
-    rowDiv.style.transition = "background-color 0.15s ease";
-    rowDiv.style.borderBottom = "1px solid #edf2f7";
+    rowDiv.style.padding = "8px 16px";
+    rowDiv.style.transition = "all 0.2s ease";
+    rowDiv.style.borderBottom = "1px solid var(--sol-base2)";
 
     const headerDiv = document.createElement("div");
     headerDiv.className = "node-header";
@@ -372,7 +374,7 @@ function renderNodeHTML(node, hideSources = false) {
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
         toggleIcon.style.fontSize = "12px";
-        toggleIcon.style.color = "#718096";
+        toggleIcon.style.color = "var(--sol-base1)";
         toggleIcon.style.width = "14px";
         toggleIcon.style.display = "inline-block";
         toggleIcon.style.textAlign = "center";
@@ -414,18 +416,13 @@ function renderNodeHTML(node, hideSources = false) {
     };
     headerDiv.appendChild(checkbox);
 
-    const folderIcon = document.createElement("span");
-    folderIcon.innerText = hasChildren ? "📁 " : "📄 ";
-    folderIcon.style.marginRight = "6px";
-    folderIcon.style.fontSize = "14px";
-    folderIcon.style.flexShrink = "0";
-    headerDiv.appendChild(folderIcon);
+    // No folder/file emojis (keeps style clean and airy)
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
     labelSpan.innerText = node.name;
     labelSpan.style.fontSize = "14px";
-    labelSpan.style.color = "#2d3748";
+    labelSpan.style.color = "var(--sol-base01)";
     labelSpan.style.cursor = "pointer";
     labelSpan.style.textOverflow = "ellipsis";
     labelSpan.style.overflow = "hidden";
@@ -441,7 +438,7 @@ function renderNodeHTML(node, hideSources = false) {
     goBtn.style.fontSize = "11px";
     goBtn.style.marginLeft = "auto";
     goBtn.style.flexShrink = "0";
-    goBtn.innerText = "↗️";
+    goBtn.innerText = "↗";
     goBtn.title = `Ir a [[${node.fullName}]]`;
     goBtn.onclick = (e) => {
         e.preventDefault();
@@ -511,7 +508,7 @@ function renderNodeHTML(node, hideSources = false) {
     if (hasChildren) {
         const ul = document.createElement("ul");
         ul.style.paddingLeft = "20px";
-        ul.style.borderLeft = "1px dashed #cbd5e0";
+        ul.style.borderLeft = "1px dashed var(--sol-base1)";
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
@@ -535,7 +532,7 @@ function renderCodebookNodeHTML(node) {
     headerDiv.className = "node-header";
     headerDiv.style.display = "flex";
     headerDiv.style.alignItems = "center";
-    headerDiv.style.padding = "2px 4px";
+    headerDiv.style.padding = "8px 16px";
     headerDiv.style.transition = "background-color 0.15s ease";
 
     const hasChildren = Object.keys(node.children).length > 0;
@@ -548,7 +545,7 @@ function renderCodebookNodeHTML(node) {
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
         toggleIcon.style.fontSize = "12px";
-        toggleIcon.style.color = "#718096";
+        toggleIcon.style.color = "var(--sol-base1)";
         toggleIcon.style.width = "14px";
         toggleIcon.style.display = "inline-block";
         toggleIcon.style.textAlign = "center";
@@ -573,17 +570,13 @@ function renderCodebookNodeHTML(node) {
         headerDiv.appendChild(spacer);
     }
 
-    const folderIcon = document.createElement("span");
-    folderIcon.innerText = hasChildren ? "📁 " : "📄 ";
-    folderIcon.style.marginRight = "6px";
-    folderIcon.style.fontSize = "14px";
-    headerDiv.appendChild(folderIcon);
+    // No folder/file emojis
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
     labelSpan.innerText = node.name;
     labelSpan.style.fontSize = "14px";
-    labelSpan.style.color = "#2d3748";
+    labelSpan.style.color = "var(--sol-base01)";
     headerDiv.appendChild(labelSpan);
 
     const goBtn = document.createElement("button");
@@ -591,7 +584,7 @@ function renderCodebookNodeHTML(node) {
     goBtn.style.padding = "2px 6px";
     goBtn.style.fontSize = "11px";
     goBtn.style.marginLeft = "auto";
-    goBtn.innerText = "↗️";
+    goBtn.innerText = "↗";
     goBtn.title = `Ir a [[${node.fullName}]]`;
     goBtn.onclick = (e) => {
         e.preventDefault();
@@ -609,7 +602,7 @@ function renderCodebookNodeHTML(node) {
     if (hasChildren) {
         const ul = document.createElement("ul");
         ul.style.paddingLeft = "20px";
-        ul.style.borderLeft = "1px dashed #cbd5e0";
+        ul.style.borderLeft = "1px dashed var(--sol-base1)";
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
@@ -635,9 +628,9 @@ function renderCasoNodeHTML(node, isCase = false) {
     rowDiv.style.alignItems = "center";
     rowDiv.style.justifyContent = "space-between";
     rowDiv.style.width = "100%";
-    rowDiv.style.padding = "4px 8px";
-    rowDiv.style.transition = "background-color 0.15s ease";
-    rowDiv.style.borderBottom = "1px solid #edf2f7";
+    rowDiv.style.padding = "8px 16px";
+    rowDiv.style.transition = "all 0.2s ease";
+    rowDiv.style.borderBottom = "1px solid var(--sol-base2)";
 
     const casoCol = document.createElement("div");
     casoCol.className = "node-caso-col";
@@ -666,7 +659,7 @@ function renderCasoNodeHTML(node, isCase = false) {
     citesCol.style.flexShrink = "0";
     citesCol.style.fontSize = "13px";
     citesCol.style.fontWeight = "600";
-    citesCol.style.color = "#4a5568";
+    citesCol.style.color = "var(--sol-base00)";
 
     const hasChildren = Object.keys(node.children).length > 0;
     
@@ -679,7 +672,7 @@ function renderCasoNodeHTML(node, isCase = false) {
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
         toggleIcon.style.fontSize = "12px";
-        toggleIcon.style.color = "#718096";
+        toggleIcon.style.color = "var(--sol-base1)";
         toggleIcon.style.width = "14px";
         toggleIcon.style.display = "inline-block";
         toggleIcon.style.textAlign = "center";
@@ -719,17 +712,13 @@ function renderCasoNodeHTML(node, isCase = false) {
         updateAncestorStates(checkbox);
     };
 
-    const folderIcon = document.createElement("span");
-    folderIcon.innerText = hasChildren ? "📁 " : "📄 ";
-    folderIcon.style.marginRight = "6px";
-    folderIcon.style.fontSize = "14px";
-    folderIcon.style.flexShrink = "0";
+    // No folder/file emojis
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
     labelSpan.innerText = node.name;
     labelSpan.style.fontSize = "14px";
-    labelSpan.style.color = "#2d3748";
+    labelSpan.style.color = "var(--sol-base01)";
     labelSpan.style.cursor = "pointer";
     labelSpan.style.textOverflow = "ellipsis";
     labelSpan.style.overflow = "hidden";
@@ -744,7 +733,7 @@ function renderCasoNodeHTML(node, isCase = false) {
     goBtn.style.fontSize = "11px";
     goBtn.style.marginLeft = "auto";
     goBtn.style.flexShrink = "0";
-    goBtn.innerText = "↗️";
+    goBtn.innerText = "↗";
     goBtn.title = `Ir a [[${node.fullName}]]`;
     goBtn.onclick = (e) => {
         e.preventDefault();
@@ -759,7 +748,6 @@ function renderCasoNodeHTML(node, isCase = false) {
     if (isCase) {
         casoCol.appendChild(checkbox);
         if (toggleIcon) casoCol.appendChild(toggleIcon);
-        casoCol.appendChild(folderIcon);
         casoCol.appendChild(labelSpan);
         casoCol.appendChild(goBtn);
         
@@ -769,7 +757,6 @@ function renderCasoNodeHTML(node, isCase = false) {
         
         codeCol.appendChild(checkbox);
         if (toggleIcon) codeCol.appendChild(toggleIcon);
-        codeCol.appendChild(folderIcon);
         codeCol.appendChild(labelSpan);
         codeCol.appendChild(goBtn);
     }
@@ -785,7 +772,7 @@ function renderCasoNodeHTML(node, isCase = false) {
     if (hasChildren) {
         const ul = document.createElement("ul");
         ul.style.paddingLeft = "20px";
-        ul.style.borderLeft = "1px dashed #cbd5e0";
+        ul.style.borderLeft = "1px dashed var(--sol-base1)";
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
@@ -893,59 +880,87 @@ function crearInterfazModal(rootNode, pageTitle) {
     if (existingStyles) {
         existingStyles.remove();
     }
-    
     const styleTag = document.createElement("style");
     styleTag.id = "cuali-nemesis-styles";
     styleTag.innerHTML = `
         #extractor-cualitativo-overlay {
+            --sol-base03: #002b36;
+            --sol-base02: #000000;
+            --sol-base01: #000000;
+            --sol-base00: #000000;
+            --sol-base0:  #222222;
+            --sol-base1:  #555555;
+            --sol-base2:  #f2f1ed;
+            --sol-base3:  #fcfcfa;
+            
+            --sol-yellow:  #b58900;
+            --sol-orange:  #cb4b16;
+            --sol-red:     #dc322f;
+            --sol-magenta: #d33682;
+            --sol-violet:  #6c71c4;
+            --sol-blue:    #268bd2;
+            --sol-cyan:    #2aa198;
+            --sol-green:   #859900;
+
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
+            background-color: rgba(7, 54, 66, 0.25);
+            backdrop-filter: blur(6px);
+            transition: all 0.3s ease;
         }
         .cuali-modal {
-            background: #ffffff;
-            padding: 24px;
-            border-radius: 12px;
+            background: var(--sol-base3);
+            padding: 20px 32px;
+            border-radius: 16px;
             width: 90vw;
             max-width: 1200px;
-            height: 85vh;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e2e8f0;
+            height: 90vh;
+            box-shadow: 0 30px 60px -15px rgba(7, 54, 66, 0.12), 0 15px 30px -10px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(147, 161, 161, 0.25);
             display: flex;
             flex-direction: column;
+            color: var(--sol-base01);
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.01em;
+            line-height: 1.5;
         }
         .cuali-header {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1a202c;
+            font-family: Georgia, serif;
+            font-size: 1.65rem;
+            font-weight: 400;
+            color: var(--sol-base02);
             margin-top: 0;
             margin-bottom: 12px;
+            border-bottom: 1px solid rgba(147, 161, 161, 0.2);
+            padding-bottom: 8px;
+            letter-spacing: 0.02em;
         }
         
         /* Tabs Styles */
         .cuali-tabs {
             display: flex;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid rgba(147, 161, 161, 0.2);
             margin-bottom: 16px;
+            gap: 16px;
         }
         .cuali-tab-btn {
-            padding: 10px 16px;
+            padding: 6px 12px 10px 12px;
             background: transparent;
             border: none;
             border-bottom: 2px solid transparent;
             font-size: 14px;
-            font-weight: 500;
-            color: #718096;
+            font-weight: 400;
+            color: var(--sol-base1);
             cursor: pointer;
-            transition: all 0.2s;
-            margin-right: 8px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cuali-tab-btn:hover {
-            color: #2d3748;
+            color: var(--sol-base00);
         }
         .cuali-tab-btn.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
+            color: var(--sol-blue);
+            border-bottom-color: var(--sol-blue);
+            font-weight: 600;
         }
         .cuali-tab-content {
             display: none;
@@ -959,10 +974,10 @@ function crearInterfazModal(rootNode, pageTitle) {
         
         /* Lists and Trees */
         .cuali-list-box {
-            background: #f7fafc;
-            border: 1px solid #cbd5e0;
+            background: var(--sol-base3);
+            border: 1px solid rgba(147, 161, 161, 0.15);
             border-radius: 8px;
-            padding: 12px;
+            padding: 12px 16px;
             overflow-y: auto;
             flex: 1;
         }
@@ -971,18 +986,20 @@ function crearInterfazModal(rootNode, pageTitle) {
             border-radius: 0 0 8px 8px;
         }
         .cuali-list-item {
-            padding: 6px 8px;
-            border-bottom: 1px solid #edf2f7;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(147, 161, 161, 0.1);
             font-size: 14px;
-            color: #2d3748;
+            color: var(--sol-base00);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            transition: background-color 0.15s ease;
+            transition: all 0.2s ease;
         }
         .cuali-list-item:hover {
-            background-color: #edf2f7;
+            background-color: var(--sol-base2);
             border-radius: 4px;
+            transform: translateX(3px);
+            color: var(--sol-base02);
         }
         .cuali-list-item:last-child {
             border-bottom: none;
@@ -1000,15 +1017,15 @@ function crearInterfazModal(rootNode, pageTitle) {
         .cuali-table-header {
             display: flex;
             align-items: center;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 11px;
-            color: #4a5568;
+            color: var(--sol-base01);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 8px 12px;
-            background-color: #edf2f7;
-            border: 1px solid #cbd5e0;
-            border-bottom: 2px solid #cbd5e0;
+            letter-spacing: 0.08em;
+            padding: 10px 16px;
+            background-color: var(--sol-base2);
+            border: 1px solid rgba(147, 161, 161, 0.15);
+            border-bottom: 2px solid rgba(147, 161, 161, 0.25);
             border-radius: 6px 6px 0 0;
             margin-top: 4px;
         }
@@ -1027,19 +1044,21 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
 
         .node-row {
-            border-bottom: 1px solid #edf2f7;
+            border-bottom: 1px solid rgba(147, 161, 161, 0.1);
+            transition: all 0.2s ease;
         }
         .node-row:hover {
-            background-color: #edf2f7;
+            background-color: var(--sol-base2);
             border-radius: 4px;
+            transform: translateX(3px);
         }
 
         .node-cites-col {
             width: 100px;
             text-align: center;
             font-size: 13px;
-            font-weight: 600;
-            color: #4a5568;
+            font-weight: 500;
+            color: var(--sol-base00);
             flex-shrink: 0;
         }
         .node-sources-col {
@@ -1055,31 +1074,33 @@ function crearInterfazModal(rootNode, pageTitle) {
             padding-left: 8px;
         }
         .cuali-tag {
-            background-color: #e0e7ff;
-            color: #4f46e5;
-            padding: 2px 6px;
+            background-color: rgba(38, 139, 210, 0.04);
+            color: var(--sol-blue);
+            padding: 2px 8px;
             border-radius: 4px;
             font-size: 11px;
-            font-weight: 500;
+            font-weight: 600;
             white-space: nowrap;
             max-width: 130px;
             overflow: hidden;
             text-overflow: ellipsis;
             display: inline-block;
+            border: 1px solid rgba(38, 139, 210, 0.2);
         }
         .cuali-tag-more {
-            background-color: #e2e8f0;
-            color: #4a5568;
+            background-color: rgba(147, 161, 161, 0.05);
+            color: var(--sol-base01);
+            border-color: rgba(147, 161, 161, 0.2);
             cursor: help;
         }
         .cuali-group-title {
-            font-weight: 600;
+            font-weight: 500;
             font-size: 12px;
-            color: #a0aec0;
+            color: var(--sol-base1);
             text-transform: uppercase;
             margin-top: 16px;
             margin-bottom: 6px;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
         }
         .cuali-group-title:first-child {
             margin-top: 0;
@@ -1088,18 +1109,25 @@ function crearInterfazModal(rootNode, pageTitle) {
         /* Search Inputs */
         .cuali-search-input {
             width: 100%;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            border: 1px solid #cbd5e0;
-            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(147, 161, 161, 0.2);
+            border-radius: 8px;
             font-size: 14px;
             box-sizing: border-box;
             outline: none;
-            transition: border-color 0.15s ease;
+            background-color: var(--sol-base3);
+            color: var(--sol-base01);
+            transition: all 0.25s ease;
+            font-weight: 400;
         }
         .cuali-search-input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            border-color: var(--sol-blue);
+            box-shadow: 0 0 0 3px rgba(38, 139, 210, 0.1);
+            background-color: var(--sol-base3);
+        }
+        .cuali-search-input::placeholder {
+            color: var(--sol-base1);
         }
         
         /* Toolbar */
@@ -1107,68 +1135,89 @@ function crearInterfazModal(rootNode, pageTitle) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .cuali-toolbar-left {
             display: flex;
-            gap: 8px;
+            gap: 16px;
         }
         .cuali-btn-tool {
-            padding: 4px 10px;
-            font-size: 12px;
-            background: #edf2f7;
-            border: 1px solid #cbd5e0;
-            color: #4a5568;
-            border-radius: 4px;
+            background: transparent;
+            border: none;
+            color: var(--sol-base1);
             cursor: pointer;
-            font-weight: 500;
-            transition: all 0.15s ease;
+            font-size: 13px;
+            font-weight: 400;
+            padding: 4px 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
         .cuali-btn-tool:hover {
-            background: #e2e8f0;
-            color: #2d3748;
+            color: var(--sol-blue);
+            background: rgba(38, 139, 210, 0.05);
+            border-radius: 4px;
+            transform: translateY(-0.5px);
         }
         
         /* Bottom Buttons */
         .cuali-buttons {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            margin-top: 16px;
+            gap: 12px;
+            margin-top: 10px;
         }
         .cuali-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 10px 24px;
+            border-radius: 8px;
             font-weight: 500;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            letter-spacing: 0.02em;
+        }
+        .cuali-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(7, 54, 66, 0.05);
+        }
+        .cuali-btn:active {
+            transform: translateY(1px);
         }
         .cuali-btn-cancel {
-            background: #fff;
-            border: 1px solid #cbd5e0;
-            color: #4a5568;
+            background: transparent;
+            border: 1px solid var(--sol-base1);
+            color: var(--sol-base1);
         }
         .cuali-btn-cancel:hover {
-            background: #f7fafc;
-            border-color: #a0aec0;
+            background: rgba(147, 161, 161, 0.06);
+            color: var(--sol-base02);
+            border-color: var(--sol-base0);
         }
         .cuali-btn-clipboard {
-            background: #10b981;
-            border: none;
-            color: #fff;
+            background: rgba(133, 153, 0, 0.04);
+            border: 1px solid var(--sol-green);
+            color: var(--sol-green);
         }
         .cuali-btn-clipboard:hover {
-            background: #059669;
+            background: rgba(133, 153, 0, 0.1);
+            color: #738600;
+            border-color: #738600;
         }
         .cuali-btn-page {
-            background: #3b82f6;
-            border: none;
-            color: #fff;
+            background: rgba(38, 139, 210, 0.04);
+            border: 1px solid var(--sol-blue);
+            color: var(--sol-blue);
         }
         .cuali-btn-page:hover {
-            background: #2563eb;
+            background: rgba(38, 139, 210, 0.1);
+            color: #1e71ab;
+            border-color: #1e71ab;
         }
         /* hover logic cleaned up */
     `;
@@ -1318,7 +1367,7 @@ function crearInterfazModal(rootNode, pageTitle) {
             rootUl.appendChild(renderNodeHTML(rootNode.children[childName], true));
         });
     } else {
-        rootUl.innerHTML = "<li style='color: #a0aec0; padding: 10px;'>No hay códigos en la página activa.</li>";
+        rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos en la página activa.</li>";
     }
     
     treeContainer.appendChild(rootUl);
@@ -1545,7 +1594,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         const casos = obtenerCasosGlobal();
         
         if (casos.length === 0) {
-            listCasosContainer.innerHTML = "<div class='cuali-list-item' style='color: #a0aec0;'>No se encontraron casos (páginas que inician con entrevistadx/)</div>";
+            listCasosContainer.innerHTML = "<div class='cuali-list-item' style='color: var(--sol-base1);'>No se encontraron casos (páginas que inician con entrevistadx/)</div>";
             return;
         }
 
@@ -1581,7 +1630,7 @@ function crearInterfazModal(rootNode, pageTitle) {
                 rootUl.appendChild(renderCasoNodeHTML(casosTreeRoot.children[childName], true));
             });
         } else {
-            rootUl.innerHTML = "<li style='color: #a0aec0; padding: 10px;'>No hay códigos asociados a los casos.</li>";
+            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos asociados a los casos.</li>";
         }
         
         listCasosContainer.appendChild(rootUl);
@@ -1750,7 +1799,7 @@ function crearInterfazModal(rootNode, pageTitle) {
                 rootUl.appendChild(renderNodeHTML(codebookTreeRoot.children[childName]));
             });
         } else {
-            rootUl.innerHTML = "<li style='color: #a0aec0; padding: 10px;'>No hay códigos en el codebook.</li>";
+            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos en el codebook.</li>";
         }
         
         listCodebookContainer.appendChild(rootUl);
