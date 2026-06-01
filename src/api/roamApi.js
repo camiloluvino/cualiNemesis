@@ -54,7 +54,7 @@ async function crearBloquesRecursivo(node, parentUid, order) {
         for (const citeUid of node.cites) {
             window.roamAlphaAPI.createBlock({
                 location: {"parent-uid": nodeUid, order: childOrder},
-                block: {string: `((${citeUid}))`}
+                block: {string: `((${citeUid.uid}))`}
             });
             childOrder++;
             await sleep(50);
@@ -155,22 +155,26 @@ function refrescarCachesGlobales() {
 function obtenerReferenciasDeCodigos(titulos) {
     if (!titulos || titulos.length === 0) return {};
     const res = window.roamAlphaAPI.q(`
-        [:find ?title ?buid
+        [:find ?title ?buid ?pageTitle
          :in $ [?title ...]
          :where
          [?p :node/title ?title]
          [?b :block/refs ?p]
          [?b :block/uid ?buid]
+         [?b :block/page ?page]
+         [?page :node/title ?pageTitle]
         ]
     `, titulos);
     
     const map = {};
     titulos.forEach(t => map[t] = []);
     
+    const validPagePattern = /^entrevistadx\/[^/]+\/transcripci[óo]n\/a analizar$/i;
+    
     if (res) {
-        res.forEach(([title, buid]) => {
-            if (map[title]) {
-                map[title].push(buid);
+        res.forEach(([title, buid, pageTitle]) => {
+            if (map[title] && validPagePattern.test(pageTitle || "")) {
+                map[title].push({ uid: buid, page: pageTitle });
             }
         });
     }

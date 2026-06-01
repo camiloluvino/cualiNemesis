@@ -10,12 +10,16 @@ function iniciarExtractorCualitativo() {
     const blocks = obtenerBloquesDePagina(pageUid);
 
     const codeMap = procesarBloques(blocks);
+    const codeMapWithObjects = {};
+    for (const [code, uids] of Object.entries(codeMap)) {
+        codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+    }
 
-    if (Object.keys(codeMap).length === 0) {
+    if (Object.keys(codeMapWithObjects).length === 0) {
         mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
     }
 
-    const rootNode = construirArbolCodigos(codeMap);
+    const rootNode = construirArbolCodigos(codeMapWithObjects);
 
     crearInterfazModal(rootNode, pageTitle);
 }

@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.4.1 - Last Updated: 2026-05-31 23:00:28
+﻿// CualiNemesis v0.4.1 - Last Updated: 2026-06-01 00:50:26
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -77,7 +77,7 @@ async function crearBloquesRecursivo(node, parentUid, order) {
         for (const citeUid of node.cites) {
             window.roamAlphaAPI.createBlock({
                 location: {"parent-uid": nodeUid, order: childOrder},
-                block: {string: `((${citeUid}))`}
+                block: {string: `((${citeUid.uid}))`}
             });
             childOrder++;
             await sleep(50);
@@ -178,22 +178,26 @@ function refrescarCachesGlobales() {
 function obtenerReferenciasDeCodigos(titulos) {
     if (!titulos || titulos.length === 0) return {};
     const res = window.roamAlphaAPI.q(`
-        [:find ?title ?buid
+        [:find ?title ?buid ?pageTitle
          :in $ [?title ...]
          :where
          [?p :node/title ?title]
          [?b :block/refs ?p]
          [?b :block/uid ?buid]
+         [?b :block/page ?page]
+         [?page :node/title ?pageTitle]
         ]
     `, titulos);
     
     const map = {};
     titulos.forEach(t => map[t] = []);
     
+    const validPagePattern = /^entrevistadx\/[^/]+\/transcripci[óo]n\/a analizar$/i;
+    
     if (res) {
-        res.forEach(([title, buid]) => {
-            if (map[title]) {
-                map[title].push(buid);
+        res.forEach(([title, buid, pageTitle]) => {
+            if (map[title] && validPagePattern.test(pageTitle || "")) {
+                map[title].push({ uid: buid, page: pageTitle });
             }
         });
     }
@@ -281,10 +285,10 @@ function updateDescendantCheckboxes(liElement, checked) {
 function updateAncestorStates(checkbox) {
     let parentLi = checkbox.closest('ul').closest('li');
     while (parentLi) {
-        const parentCheckbox = parentLi.querySelector(':scope > .node-header > input[type="checkbox"]');
+        const parentCheckbox = parentLi.querySelector(':scope > .node-row > .node-header > input[type="checkbox"]');
         if (!parentCheckbox) break;
 
-        const childCheckboxes = Array.from(parentLi.querySelector(':scope > ul').querySelectorAll(':scope > li > .node-header > input[type="checkbox"]'));
+        const childCheckboxes = Array.from(parentLi.querySelector(':scope > ul').querySelectorAll(':scope > li > .node-row > .node-header > input[type="checkbox"]'));
         
         const allChecked = childCheckboxes.every(cb => cb.checked && !cb.indeterminate);
         const allUnchecked = childCheckboxes.every(cb => !cb.checked && !cb.indeterminate);
@@ -316,17 +320,47 @@ function abrirPaginaPorTitulo(title) {
     }
 }
 
-function renderNodeHTML(node) {
+function getAggregateCites(node) {
+    let count = node.cites.length;
+    for (const childName in node.children) {
+        count += getAggregateCites(node.children[childName]);
+    }
+    return count;
+}
+
+function getAggregateSources(node) {
+    const sources = new Set();
+    node.cites.forEach(c => {
+        if (c.page) sources.add(c.page);
+    });
+    for (const childName in node.children) {
+        const childSources = getAggregateSources(node.children[childName]);
+        childSources.forEach(s => sources.add(s));
+    }
+    return sources;
+}
+
+function renderNodeHTML(node, hideSources = false) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
-    li.style.margin = "4px 0";
+    li.style.margin = "2px 0";
+
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "node-row";
+    rowDiv.style.display = "flex";
+    rowDiv.style.alignItems = "center";
+    rowDiv.style.justifyContent = "space-between";
+    rowDiv.style.width = "100%";
+    rowDiv.style.padding = "4px 8px";
+    rowDiv.style.transition = "background-color 0.15s ease";
+    rowDiv.style.borderBottom = "1px solid #edf2f7";
 
     const headerDiv = document.createElement("div");
     headerDiv.className = "node-header";
     headerDiv.style.display = "flex";
     headerDiv.style.alignItems = "center";
-    headerDiv.style.padding = "2px 4px";
-    headerDiv.style.transition = "background-color 0.15s ease";
+    headerDiv.style.flex = "1";
+    headerDiv.style.minWidth = "0";
 
     const hasChildren = Object.keys(node.children).length > 0;
 
@@ -369,6 +403,7 @@ function renderNodeHTML(node) {
     checkbox._node = node;
     checkbox.style.marginRight = "8px";
     checkbox.style.cursor = "pointer";
+    checkbox.style.flexShrink = "0";
     checkbox.onchange = () => {
         const isChecked = checkbox.checked;
         checkbox.indeterminate = false;
@@ -383,15 +418,18 @@ function renderNodeHTML(node) {
     folderIcon.innerText = hasChildren ? "📁 " : "📄 ";
     folderIcon.style.marginRight = "6px";
     folderIcon.style.fontSize = "14px";
+    folderIcon.style.flexShrink = "0";
     headerDiv.appendChild(folderIcon);
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
-    const citesText = node.cites.length > 0 ? ` (${node.cites.length} citas)` : "";
-    labelSpan.innerText = `${node.name}${citesText}`;
+    labelSpan.innerText = node.name;
     labelSpan.style.fontSize = "14px";
     labelSpan.style.color = "#2d3748";
     labelSpan.style.cursor = "pointer";
+    labelSpan.style.textOverflow = "ellipsis";
+    labelSpan.style.overflow = "hidden";
+    labelSpan.style.whiteSpace = "nowrap";
     labelSpan.onclick = () => {
         checkbox.click();
     };
@@ -402,6 +440,7 @@ function renderNodeHTML(node) {
     goBtn.style.padding = "2px 6px";
     goBtn.style.fontSize = "11px";
     goBtn.style.marginLeft = "auto";
+    goBtn.style.flexShrink = "0";
     goBtn.innerText = "↗️";
     goBtn.title = `Ir a [[${node.fullName}]]`;
     goBtn.onclick = (e) => {
@@ -414,8 +453,60 @@ function renderNodeHTML(node) {
         abrirPaginaPorTitulo(node.fullName);
     };
     headerDiv.appendChild(goBtn);
+    rowDiv.appendChild(headerDiv);
 
-    li.appendChild(headerDiv);
+    // Calculate aggregated quotes and unique sources
+    const totalCites = getAggregateCites(node);
+    const uniqueSources = Array.from(getAggregateSources(node)).sort();
+
+    // Column 2: Citation Count
+    const citesCol = document.createElement("div");
+    citesCol.className = "node-cites-col";
+    citesCol.innerText = totalCites > 0 ? totalCites : "-";
+    rowDiv.appendChild(citesCol);
+
+    if (!hideSources) {
+        // Column 3: Sources (Pills / Chips)
+        const sourcesCol = document.createElement("div");
+        sourcesCol.className = "node-sources-col";
+        
+        if (uniqueSources.length > 0 && !hasChildren) {
+            const formattedSources = uniqueSources.map(s => {
+                if (s.startsWith("entrevistadx/")) {
+                    const parts = s.split('/');
+                    if (parts.length >= 2) return parts[1];
+                }
+                return s;
+            });
+            // Ensure formatted names are unique
+            const uniqueFormatted = Array.from(new Set(formattedSources));
+            
+            const maxChipsToShow = 2;
+            const chipsToShow = uniqueFormatted.slice(0, maxChipsToShow);
+            const remaining = uniqueFormatted.length - maxChipsToShow;
+            
+            chipsToShow.forEach(sourceName => {
+                const chip = document.createElement("span");
+                chip.className = "cuali-tag";
+                chip.innerText = sourceName;
+                chip.title = sourceName;
+                sourcesCol.appendChild(chip);
+            });
+            
+            if (remaining > 0) {
+                const moreChip = document.createElement("span");
+                moreChip.className = "cuali-tag cuali-tag-more";
+                moreChip.innerText = `+${remaining} más`;
+                moreChip.title = uniqueFormatted.join(", ");
+                sourcesCol.appendChild(moreChip);
+            }
+        } else {
+            sourcesCol.innerText = "";
+        }
+        rowDiv.appendChild(sourcesCol);
+    }
+
+    li.appendChild(rowDiv);
 
     if (hasChildren) {
         const ul = document.createElement("ul");
@@ -427,7 +518,7 @@ function renderNodeHTML(node) {
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
-            ul.appendChild(renderNodeHTML(node.children[childName]));
+            ul.appendChild(renderNodeHTML(node.children[childName], hideSources));
         });
         li.appendChild(ul);
     }
@@ -541,7 +632,7 @@ function generarTextoPortapapeles(node, indentLevel = 0) {
         text += `${indent}[[${node.fullName}]]\n`;
         if (node.checked) {
             node.cites.forEach(citeUid => {
-                text += `${indent}\t((${citeUid}))\n`;
+                text += `${indent}\t((${citeUid.uid}))\n`;
             });
         }
     }
@@ -572,7 +663,7 @@ function filtrarArbolDOM(container, query) {
     });
     
     lis.forEach(li => {
-        const labelSpan = li.querySelector(':scope > .node-header > .node-label');
+        const labelSpan = li.querySelector(':scope > .node-row > .node-header > .node-label');
         if (labelSpan && labelSpan.innerText.toLowerCase().includes(q)) {
             let curr = li;
             while (curr && curr.tagName === 'LI') {
@@ -582,7 +673,7 @@ function filtrarArbolDOM(container, query) {
                     parentUl.style.display = "block";
                     const parentLi = parentUl.parentElement;
                     if (parentLi && parentLi.tagName === 'LI') {
-                        const toggle = parentLi.querySelector(':scope > .node-header > .tree-toggle');
+                        const toggle = parentLi.querySelector(':scope > .node-row > .node-header > .tree-toggle');
                         if (toggle) toggle.innerText = "▼ ";
                     }
                 }
@@ -599,7 +690,7 @@ function filtrarArbolDOM(container, query) {
                 descUl.style.display = "block";
                 const parentLi = descUl.parentElement;
                 if (parentLi && parentLi.tagName === 'LI') {
-                    const toggle = parentLi.querySelector(':scope > .node-header > .tree-toggle');
+                    const toggle = parentLi.querySelector(':scope > .node-row > .node-header > .tree-toggle');
                     if (toggle) toggle.innerText = "▼ ";
                 }
             });
@@ -692,11 +783,15 @@ function crearInterfazModal(rootNode, pageTitle) {
         /* Lists and Trees */
         .cuali-list-box {
             background: #f7fafc;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #cbd5e0;
             border-radius: 8px;
             padding: 12px;
             overflow-y: auto;
             flex: 1;
+        }
+        .cuali-list-box.cuali-tree-container {
+            border-top: none;
+            border-radius: 0 0 8px 8px;
         }
         .cuali-list-item {
             padding: 6px 8px;
@@ -719,9 +814,86 @@ function crearInterfazModal(rootNode, pageTitle) {
             opacity: 0;
             transition: opacity 0.15s ease;
         }
-        .node-header:hover .cuali-go-btn,
+        .node-row:hover .cuali-go-btn,
         .cuali-list-item:hover .cuali-go-btn {
             opacity: 1;
+        }
+
+        /* Tree Table Column Styles */
+        .cuali-table-header {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 11px;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 12px;
+            background-color: #edf2f7;
+            border: 1px solid #cbd5e0;
+            border-bottom: 2px solid #cbd5e0;
+            border-radius: 6px 6px 0 0;
+            margin-top: 4px;
+        }
+        .col-code {
+            flex: 1;
+        }
+        .col-cites {
+            width: 100px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .col-sources {
+            width: 300px;
+            flex-shrink: 0;
+            padding-left: 8px;
+        }
+
+        .node-row {
+            border-bottom: 1px solid #edf2f7;
+        }
+        .node-row:hover {
+            background-color: #edf2f7;
+            border-radius: 4px;
+        }
+
+        .node-cites-col {
+            width: 100px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            flex-shrink: 0;
+        }
+        .node-sources-col {
+            width: 300px;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0;
+            font-size: 12px;
+            padding-left: 8px;
+        }
+        .cuali-tag {
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            max-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+        .cuali-tag-more {
+            background-color: #e2e8f0;
+            color: #4a5568;
+            cursor: help;
         }
         .cuali-group-title {
             font-weight: 600;
@@ -821,10 +993,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         .cuali-btn-page:hover {
             background: #2563eb;
         }
-        .node-header:hover {
-            background-color: #edf2f7;
-            border-radius: 4px;
-        }
+        /* hover logic cleaned up */
     `;
     document.head.appendChild(styleTag);
 
@@ -948,8 +1117,15 @@ function crearInterfazModal(rootNode, pageTitle) {
     searchExportInput.className = "cuali-search-input";
     searchExportInput.placeholder = "🔍 Filtrar códigos de la página activa...";
     
+    const tableHeaderExport = document.createElement("div");
+    tableHeaderExport.className = "cuali-table-header";
+    tableHeaderExport.innerHTML = `
+        <div class="col-header col-code">Código</div>
+        <div class="col-header col-cites">Citas</div>
+    `;
+    
     const treeContainer = document.createElement("div");
-    treeContainer.className = "cuali-list-box";
+    treeContainer.className = "cuali-list-box cuali-tree-container";
     
     searchExportInput.oninput = () => {
         filtrarArbolDOM(treeContainer, searchExportInput.value);
@@ -962,7 +1138,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     if (rootNode && Object.keys(rootNode.children).length > 0) {
         const childNamesSorted = Object.keys(rootNode.children).sort();
         childNamesSorted.forEach(childName => {
-            rootUl.appendChild(renderNodeHTML(rootNode.children[childName]));
+            rootUl.appendChild(renderNodeHTML(rootNode.children[childName], true));
         });
     } else {
         rootUl.innerHTML = "<li style='color: #a0aec0; padding: 10px;'>No hay códigos en la página activa.</li>";
@@ -972,6 +1148,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     
     tabExportacion.appendChild(toolbar);
     tabExportacion.appendChild(searchExportInput);
+    tabExportacion.appendChild(tableHeaderExport);
     tabExportacion.appendChild(treeContainer);
     
     const exportButtons = document.createElement("div");
@@ -1165,8 +1342,16 @@ function crearInterfazModal(rootNode, pageTitle) {
     searchCodebookInput.className = "cuali-search-input";
     searchCodebookInput.placeholder = "🔍 Filtrar codebook por nombre o nivel jerárquico...";
 
+    const tableHeaderCodebook = document.createElement("div");
+    tableHeaderCodebook.className = "cuali-table-header";
+    tableHeaderCodebook.innerHTML = `
+        <div class="col-header col-code">Código</div>
+        <div class="col-header col-cites">Citas</div>
+        <div class="col-header col-sources">Fuentes</div>
+    `;
+
     const listCodebookContainer = document.createElement("div");
-    listCodebookContainer.className = "cuali-list-box";
+    listCodebookContainer.className = "cuali-list-box cuali-tree-container";
 
     searchCodebookInput.oninput = () => {
         filtrarArbolDOM(listCodebookContainer, searchCodebookInput.value);
@@ -1174,6 +1359,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     tabCodebook.appendChild(toolbarCodebook);
     tabCodebook.appendChild(searchCodebookInput);
+    tabCodebook.appendChild(tableHeaderCodebook);
     tabCodebook.appendChild(listCodebookContainer);
 
     const codebookButtons = document.createElement("div");
@@ -1309,12 +1495,16 @@ function iniciarExtractorCualitativo() {
     const blocks = obtenerBloquesDePagina(pageUid);
 
     const codeMap = procesarBloques(blocks);
+    const codeMapWithObjects = {};
+    for (const [code, uids] of Object.entries(codeMap)) {
+        codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+    }
 
-    if (Object.keys(codeMap).length === 0) {
+    if (Object.keys(codeMapWithObjects).length === 0) {
         mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
     }
 
-    const rootNode = construirArbolCodigos(codeMap);
+    const rootNode = construirArbolCodigos(codeMapWithObjects);
 
     crearInterfazModal(rootNode, pageTitle);
 }

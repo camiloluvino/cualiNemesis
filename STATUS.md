@@ -1,6 +1,6 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Ajustes de Usabilidad y Navegación (V 0.4.1 - Local)
+## Fase Actual: Ajustes de Usabilidad y Navegación (V 0.5.0 - Local)
 
 ### Completado
 - [x] Consulta Datalog para extracción de bloques codificados en la página actual.
@@ -21,6 +21,10 @@
 - [x] **Filtro de Descendientes de Árbol (v0.4.1):** Al buscar en el Codebook, se muestran y expanden automáticamente todos los descendientes de los nodos coincidentes.
 - [x] **Selección y Extracción Global en Codebook (v0.4.2):** Habilitada la selección de códigos mediante casillas de verificación directamente en la pestaña de Codificación (Analítico), permitiendo extraer citas en todo el grafo (hacia portapapeles o nueva página).
 - [x] **Botones de Selección Masiva (v0.4.2):** Botones de "Seleccionar todo" y "Deseleccionar todo" añadidos en las barras de herramientas de las pestañas de Exportación Contextual y Codificación (Analítico).
+- [x] **Visualización en Tabla de Árbol (TreeTable) (v0.5.0):** Evolución del diseño de árbol a una tabla de árbol de 3 columnas (Código, Citas, Fuentes) que optimiza el espacio y la lectura analítica.
+- [x] **Filtrado de Fuentes de Transcripción (v0.5.0):** Restricción en el conteo del Codebook global para considerar únicamente citas en páginas de transcripción activas (`entrevistadx/[Nombre]/transcripción/a analizar`), ignorando las páginas de codificación o referencia manual.
+- [x] **Visualización Simplificada de Entrevistados (v0.5.0):** Se extrae únicamente el nombre del entrevistado en la columna "Fuentes" y se restringe su visualización exclusivamente a los códigos de nivel hoja (nodos de último nivel) para evitar ruido visual en categorías superiores.
+
 
 
 ### En Progreso / Tareas Inmediatas

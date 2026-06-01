@@ -10,7 +10,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 
 ### 1. 📂 Exportación Contextual
 * Extrae todos los códigos y citas aplicadas a los bloques de la página activa en tiempo real.
-* Renderiza los códigos en una interfaz de árbol jerárquico interactivo con checkboxes en cascada (marcado, desmarcado y estado indeterminado).
+* Renderiza los códigos en una estructura de tabla de árbol (TreeTable) interactiva con checkboxes en cascada (marcado, desmarcado y estado indeterminado) y columnas dedicadas para el **Código** y la cantidad de **Citas**. La columna de fuentes se oculta automáticamente por estar dentro del contexto de una única entrevista.
 * **Exportación dual:**
   * **Copiar al portapapeles:** Genera un texto con tabulaciones listas para pegar en cualquier página de Roam conservando la jerarquía.
   * **Crear nueva página:** Crea automáticamente una página consolidada en Roam con referencias dinámicas de bloques `((UID))` organizados jerárquicamente.
@@ -25,7 +25,11 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 
 ### 3. 🗺️ Codificación (Codebook Global)
 * Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`), Códigos (`cod/`) y Memos (`memo/`).
-* Renderiza el Codebook global en una estructura de árbol interactivo con checkboxes en cascada (marcado, desmarcado y estado indeterminado) para seleccionar nodos.
+* Renderiza el Codebook global en una estructura de tabla de árbol (TreeTable) interactiva con checkboxes en cascada y tres columnas: **Código**, **Citas** (cantidad total de citas asociadas) y **Fuentes** (entrevistados vinculados).
+* **Filtrado y Visualización de Fuentes:**
+  * **Conteo empírico estricto:** Solo se contabilizan y muestran citas provenientes de páginas con formato `entrevistadx/[Nombre]/transcripción/a analizar`, ignorando páginas de referencia manual o codificación.
+  * **Formato limpio:** Se extrae solo el nombre del entrevistado en formato de etiqueta compacta (chip visual).
+  * **Especificidad en hoja:** Las etiquetas de fuentes se muestran únicamente en los códigos del último nivel jerárquico (nodos hoja) para no saturar las categorías y carpetas padre.
 * **Extracción global:** Permite consolidar citas de todo el grafo mediante:
   * **Copiar al portapapeles:** Copia los códigos seleccionados y sus citas en formato árbol.
   * **Crear nueva página:** Genera una página consolidada en Roam con referencias de bloque de todo el grafo para los códigos seleccionados.
