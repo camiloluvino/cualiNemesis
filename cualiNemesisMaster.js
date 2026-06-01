@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.4.1 - Last Updated: 2026-06-01 00:50:26
+﻿// CualiNemesis v0.6.0 - Last Updated: 2026-06-01 01:31:35
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -285,10 +285,10 @@ function updateDescendantCheckboxes(liElement, checked) {
 function updateAncestorStates(checkbox) {
     let parentLi = checkbox.closest('ul').closest('li');
     while (parentLi) {
-        const parentCheckbox = parentLi.querySelector(':scope > .node-row > .node-header > input[type="checkbox"]');
+        const parentCheckbox = parentLi.querySelector(':scope > .node-row input[type="checkbox"]');
         if (!parentCheckbox) break;
 
-        const childCheckboxes = Array.from(parentLi.querySelector(':scope > ul').querySelectorAll(':scope > li > .node-row > .node-header > input[type="checkbox"]'));
+        const childCheckboxes = Array.from(parentLi.querySelector(':scope > ul').querySelectorAll(':scope > li > .node-row input[type="checkbox"]'));
         
         const allChecked = childCheckboxes.every(cb => cb.checked && !cb.indeterminate);
         const allUnchecked = childCheckboxes.every(cb => !cb.checked && !cb.indeterminate);
@@ -624,6 +624,182 @@ function renderCodebookNodeHTML(node) {
     return li;
 }
 
+function renderCasoNodeHTML(node, isCase = false) {
+    const li = document.createElement("li");
+    li.style.listStyleType = "none";
+    li.style.margin = "2px 0";
+
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "node-row";
+    rowDiv.style.display = "flex";
+    rowDiv.style.alignItems = "center";
+    rowDiv.style.justifyContent = "space-between";
+    rowDiv.style.width = "100%";
+    rowDiv.style.padding = "4px 8px";
+    rowDiv.style.transition = "background-color 0.15s ease";
+    rowDiv.style.borderBottom = "1px solid #edf2f7";
+
+    const casoCol = document.createElement("div");
+    casoCol.className = "node-caso-col";
+    casoCol.style.width = "200px";
+    casoCol.style.flexShrink = "0";
+    casoCol.style.display = "flex";
+    casoCol.style.alignItems = "center";
+    casoCol.style.overflow = "hidden";
+    casoCol.style.textOverflow = "ellipsis";
+    casoCol.style.whiteSpace = "nowrap";
+
+    const codeCol = document.createElement("div");
+    codeCol.className = "node-code-col";
+    codeCol.style.flex = "1";
+    codeCol.style.display = "flex";
+    codeCol.style.alignItems = "center";
+    codeCol.style.minWidth = "0";
+    codeCol.style.overflow = "hidden";
+    codeCol.style.textOverflow = "ellipsis";
+    codeCol.style.whiteSpace = "nowrap";
+
+    const citesCol = document.createElement("div");
+    citesCol.className = "node-cites-col";
+    citesCol.style.width = "100px";
+    citesCol.style.textAlign = "center";
+    citesCol.style.flexShrink = "0";
+    citesCol.style.fontSize = "13px";
+    citesCol.style.fontWeight = "600";
+    citesCol.style.color = "#4a5568";
+
+    const hasChildren = Object.keys(node.children).length > 0;
+    
+    let toggleIcon = null;
+    if (hasChildren) {
+        toggleIcon = document.createElement("span");
+        toggleIcon.className = "tree-toggle";
+        toggleIcon.innerText = "▼ ";
+        toggleIcon.style.cursor = "pointer";
+        toggleIcon.style.marginRight = "4px";
+        toggleIcon.style.fontFamily = "monospace";
+        toggleIcon.style.fontSize = "12px";
+        toggleIcon.style.color = "#718096";
+        toggleIcon.style.width = "14px";
+        toggleIcon.style.display = "inline-block";
+        toggleIcon.style.textAlign = "center";
+        
+        toggleIcon.onclick = () => {
+            const childUl = li.querySelector("ul");
+            if (childUl) {
+                if (childUl.style.display === "none") {
+                    childUl.style.display = "block";
+                    toggleIcon.innerText = "▼ ";
+                } else {
+                    childUl.style.display = "none";
+                    toggleIcon.innerText = "▶ ";
+                }
+            }
+        };
+    } else {
+        toggleIcon = document.createElement("span");
+        toggleIcon.style.display = "inline-block";
+        toggleIcon.style.width = "14px";
+        toggleIcon.style.marginRight = "4px";
+    }
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = node.checked;
+    checkbox._node = node;
+    checkbox.style.marginRight = "8px";
+    checkbox.style.cursor = "pointer";
+    checkbox.style.flexShrink = "0";
+    checkbox.onchange = () => {
+        const isChecked = checkbox.checked;
+        checkbox.indeterminate = false;
+        
+        updateNodeCheckedState(node, isChecked);
+        updateDescendantCheckboxes(li, isChecked);
+        updateAncestorStates(checkbox);
+    };
+
+    const folderIcon = document.createElement("span");
+    folderIcon.innerText = hasChildren ? "📁 " : "📄 ";
+    folderIcon.style.marginRight = "6px";
+    folderIcon.style.fontSize = "14px";
+    folderIcon.style.flexShrink = "0";
+
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "node-label";
+    labelSpan.innerText = node.name;
+    labelSpan.style.fontSize = "14px";
+    labelSpan.style.color = "#2d3748";
+    labelSpan.style.cursor = "pointer";
+    labelSpan.style.textOverflow = "ellipsis";
+    labelSpan.style.overflow = "hidden";
+    labelSpan.style.whiteSpace = "nowrap";
+    labelSpan.onclick = () => {
+        checkbox.click();
+    };
+
+    const goBtn = document.createElement("button");
+    goBtn.className = "cuali-btn-tool cuali-go-btn";
+    goBtn.style.padding = "2px 6px";
+    goBtn.style.fontSize = "11px";
+    goBtn.style.marginLeft = "auto";
+    goBtn.style.flexShrink = "0";
+    goBtn.innerText = "↗️";
+    goBtn.title = `Ir a [[${node.fullName}]]`;
+    goBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const overlay = document.getElementById("extractor-cualitativo-overlay");
+        if (overlay) {
+            document.body.removeChild(overlay);
+        }
+        abrirPaginaPorTitulo(node.fullName);
+    };
+
+    if (isCase) {
+        casoCol.appendChild(checkbox);
+        if (toggleIcon) casoCol.appendChild(toggleIcon);
+        casoCol.appendChild(folderIcon);
+        casoCol.appendChild(labelSpan);
+        casoCol.appendChild(goBtn);
+        
+        codeCol.innerHTML = "&nbsp;";
+    } else {
+        casoCol.innerHTML = "&nbsp;";
+        
+        codeCol.appendChild(checkbox);
+        if (toggleIcon) codeCol.appendChild(toggleIcon);
+        codeCol.appendChild(folderIcon);
+        codeCol.appendChild(labelSpan);
+        codeCol.appendChild(goBtn);
+    }
+
+    const totalCites = getAggregateCites(node);
+    citesCol.innerText = totalCites > 0 ? totalCites : "-";
+
+    rowDiv.appendChild(casoCol);
+    rowDiv.appendChild(codeCol);
+    rowDiv.appendChild(citesCol);
+    li.appendChild(rowDiv);
+
+    if (hasChildren) {
+        const ul = document.createElement("ul");
+        ul.style.paddingLeft = "20px";
+        ul.style.borderLeft = "1px dashed #cbd5e0";
+        ul.style.marginLeft = "6px";
+        ul.style.marginTop = "2px";
+        ul.style.marginBottom = "2px";
+        
+        const childNamesSorted = Object.keys(node.children).sort();
+        childNamesSorted.forEach(childName => {
+            ul.appendChild(renderCasoNodeHTML(node.children[childName], false));
+        });
+        li.appendChild(ul);
+    }
+
+    return li;
+}
+
 function generarTextoPortapapeles(node, indentLevel = 0) {
     let text = "";
     const indent = "\t".repeat(indentLevel);
@@ -663,7 +839,7 @@ function filtrarArbolDOM(container, query) {
     });
     
     lis.forEach(li => {
-        const labelSpan = li.querySelector(':scope > .node-row > .node-header > .node-label');
+        const labelSpan = li.querySelector(':scope > .node-row .node-label');
         if (labelSpan && labelSpan.innerText.toLowerCase().includes(q)) {
             let curr = li;
             while (curr && curr.tagName === 'LI') {
@@ -673,7 +849,7 @@ function filtrarArbolDOM(container, query) {
                     parentUl.style.display = "block";
                     const parentLi = parentUl.parentElement;
                     if (parentLi && parentLi.tagName === 'LI') {
-                        const toggle = parentLi.querySelector(':scope > .node-row > .node-header > .tree-toggle');
+                        const toggle = parentLi.querySelector(':scope > .node-row .tree-toggle');
                         if (toggle) toggle.innerText = "▼ ";
                     }
                 }
@@ -690,7 +866,7 @@ function filtrarArbolDOM(container, query) {
                 descUl.style.display = "block";
                 const parentLi = descUl.parentElement;
                 if (parentLi && parentLi.tagName === 'LI') {
-                    const toggle = parentLi.querySelector(':scope > .node-row > .node-header > .tree-toggle');
+                    const toggle = parentLi.querySelector(':scope > .node-row .tree-toggle');
                     if (toggle) toggle.innerText = "▼ ";
                 }
             });
@@ -712,6 +888,7 @@ function filtrarCasos(container, query) {
 
 function crearInterfazModal(rootNode, pageTitle) {
     let codebookTreeRoot = null;
+    let casosTreeRoot = null;
     let existingStyles = document.getElementById("cuali-nemesis-styles");
     if (existingStyles) {
         existingStyles.remove();
@@ -1193,8 +1370,71 @@ function crearInterfazModal(rootNode, pageTitle) {
     // --- POPULATE TAB: CASOS ---
     const toolbarCasos = document.createElement("div");
     toolbarCasos.className = "cuali-toolbar";
-    toolbarCasos.style.justifyContent = "flex-end";
     
+    const toolbarCasosLeft = document.createElement("div");
+    toolbarCasosLeft.className = "cuali-toolbar-left";
+    
+    const btnExpandCasos = document.createElement("button");
+    btnExpandCasos.className = "cuali-btn-tool";
+    btnExpandCasos.innerText = "Expandir todo";
+    btnExpandCasos.onclick = (e) => {
+        e.preventDefault();
+        const uls = listCasosContainer.querySelectorAll("ul");
+        uls.forEach(ul => ul.style.display = "block");
+        const toggles = listCasosContainer.querySelectorAll(".tree-toggle");
+        toggles.forEach(toggle => toggle.innerText = "▼ ");
+    };
+
+    const btnCollapseCasos = document.createElement("button");
+    btnCollapseCasos.className = "cuali-btn-tool";
+    btnCollapseCasos.innerText = "Colapsar todo";
+    btnCollapseCasos.onclick = (e) => {
+        e.preventDefault();
+        const uls = listCasosContainer.querySelectorAll("ul");
+        uls.forEach(ul => {
+            if (ul !== listCasosContainer.querySelector("ul")) {
+                ul.style.display = "none";
+            }
+        });
+        const toggles = listCasosContainer.querySelectorAll(".tree-toggle");
+        toggles.forEach(toggle => toggle.innerText = "▶ ");
+    };
+
+    const btnCasosSelectAll = document.createElement("button");
+    btnCasosSelectAll.className = "cuali-btn-tool";
+    btnCasosSelectAll.innerText = "Seleccionar todo";
+    btnCasosSelectAll.onclick = (e) => {
+        e.preventDefault();
+        if (casosTreeRoot) updateNodeCheckedState(casosTreeRoot, true);
+        const checkboxes = listCasosContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            cb.indeterminate = false;
+            if (cb._node) cb._node.checked = true;
+        });
+    };
+
+    const btnCasosDeselectAll = document.createElement("button");
+    btnCasosDeselectAll.className = "cuali-btn-tool";
+    btnCasosDeselectAll.innerText = "Deseleccionar todo";
+    btnCasosDeselectAll.onclick = (e) => {
+        e.preventDefault();
+        if (casosTreeRoot) updateNodeCheckedState(casosTreeRoot, false);
+        const checkboxes = listCasosContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+            cb.indeterminate = false;
+            if (cb._node) cb._node.checked = false;
+        });
+    };
+    
+    toolbarCasosLeft.appendChild(btnExpandCasos);
+    toolbarCasosLeft.appendChild(btnCollapseCasos);
+    toolbarCasosLeft.appendChild(btnCasosSelectAll);
+    toolbarCasosLeft.appendChild(btnCasosDeselectAll);
+    toolbarCasos.appendChild(toolbarCasosLeft);
+
+    const toolbarCasosRight = document.createElement("div");
     const btnRefreshCasos = document.createElement("button");
     btnRefreshCasos.className = "cuali-btn-tool";
     btnRefreshCasos.innerText = "🔄 Refrescar Listas";
@@ -1205,62 +1445,149 @@ function crearInterfazModal(rootNode, pageTitle) {
         renderTabCodebook();
         mostrarNotificacion("Listas refrescadas exitosamente.");
     };
-    toolbarCasos.appendChild(btnRefreshCasos);
+    toolbarCasosRight.appendChild(btnRefreshCasos);
+    toolbarCasos.appendChild(toolbarCasosRight);
     
     const searchCasosInput = document.createElement("input");
     searchCasosInput.type = "text";
     searchCasosInput.className = "cuali-search-input";
-    searchCasosInput.placeholder = "🔍 Filtrar casos por nombre...";
+    searchCasosInput.placeholder = "🔍 Filtrar casos por nombre o códigos...";
+
+    const tableHeaderCasos = document.createElement("div");
+    tableHeaderCasos.className = "cuali-table-header";
+    tableHeaderCasos.innerHTML = `
+        <div class="col-header" style="width: 200px; flex-shrink: 0;">Caso</div>
+        <div class="col-header col-code" style="flex: 1;">Código</div>
+        <div class="col-header col-cites" style="width: 100px; text-align: center; flex-shrink: 0;">Citas</div>
+    `;
 
     const listCasosContainer = document.createElement("div");
-    listCasosContainer.className = "cuali-list-box";
+    listCasosContainer.className = "cuali-list-box cuali-tree-container";
 
     searchCasosInput.oninput = () => {
-        filtrarCasos(listCasosContainer, searchCasosInput.value);
+        filtrarArbolDOM(listCasosContainer, searchCasosInput.value);
     };
     
     tabCasos.appendChild(toolbarCasos);
     tabCasos.appendChild(searchCasosInput);
+    tabCasos.appendChild(tableHeaderCasos);
     tabCasos.appendChild(listCasosContainer);
+
+    const casosButtons = document.createElement("div");
+    casosButtons.className = "cuali-buttons";
+    
+    const btnCasosClipboard = document.createElement("button");
+    btnCasosClipboard.className = "cuali-btn cuali-btn-clipboard";
+    btnCasosClipboard.innerText = "Copiar al portapapeles";
+    btnCasosClipboard.onclick = async (e) => {
+        e.preventDefault();
+        if (!casosTreeRoot || !nodoSeleccionadoOHijosSeleccionados(casosTreeRoot)) {
+            mostrarNotificacion("Selecciona al menos un caso o código.");
+            return;
+        }
+        const clipboardText = generarTextoPortapapeles(casosTreeRoot);
+        try {
+            await navigator.clipboard.writeText(clipboardText.trim());
+            mostrarNotificacion("Casos copiados en formato árbol.");
+        } catch (err) {
+            mostrarNotificacion("Error al copiar al portapapeles.");
+            console.error(err);
+        }
+    };
+    
+    const btnCasosPage = document.createElement("button");
+    btnCasosPage.className = "cuali-btn cuali-btn-page";
+    btnCasosPage.innerText = "Crear nueva página";
+    btnCasosPage.onclick = async (e) => {
+        e.preventDefault();
+        if (!casosTreeRoot || !nodoSeleccionadoOHijosSeleccionados(casosTreeRoot)) {
+            mostrarNotificacion("Selecciona al menos un caso o código.");
+            return;
+        }
+        document.body.removeChild(overlay);
+        await generarPaginaConsolidadaArbol("Casos Consolidados", casosTreeRoot);
+    };
+
+    casosButtons.appendChild(btnCasosClipboard);
+    casosButtons.appendChild(btnCasosPage);
+    tabCasos.appendChild(casosButtons);
+
+    function fixCasosTreeFullNames(node, isRoot = true) {
+        if (isRoot) {
+            for (const childName in node.children) {
+                const caseNode = node.children[childName];
+                caseNode.fullName = "entrevistadx/" + caseNode.name;
+                fixCasosTreeFullNames(caseNode, false);
+            }
+        } else {
+            for (const childName in node.children) {
+                const codeNode = node.children[childName];
+                const slashIndex = codeNode.fullName.indexOf('/');
+                if (slashIndex !== -1) {
+                    codeNode.fullName = codeNode.fullName.substring(slashIndex + 1);
+                }
+                fixCasosTreeFullNames(codeNode, false);
+            }
+        }
+    }
 
     function renderTabCasos() {
         listCasosContainer.innerHTML = "";
+        
+        const cb = obtenerCodebookGlobal();
+        const todosLosTitulos = [];
+        ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
+            todosLosTitulos.push(...cb[key]);
+        });
+        const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
+
+        const caseCodeMap = {};
         const casos = obtenerCasosGlobal();
+        
         if (casos.length === 0) {
             listCasosContainer.innerHTML = "<div class='cuali-list-item' style='color: #a0aec0;'>No se encontraron casos (páginas que inician con entrevistadx/)</div>";
-        } else {
-            casos.forEach(caso => {
-                const item = document.createElement("div");
-                item.className = "cuali-list-item";
-                
-                const label = document.createElement("span");
-                label.innerText = `📄 ${caso}`;
-                item.appendChild(label);
-                
-                const goBtn = document.createElement("button");
-                goBtn.className = "cuali-btn-tool cuali-go-btn";
-                goBtn.style.padding = "2px 6px";
-                goBtn.style.fontSize = "11px";
-                goBtn.style.marginLeft = "10px";
-                goBtn.innerText = "↗️ Ir a página";
-                goBtn.title = `Ir a [[${caso}]]`;
-                goBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const overlay = document.getElementById("extractor-cualitativo-overlay");
-                    if (overlay) {
-                        document.body.removeChild(overlay);
+            return;
+        }
+
+        casos.forEach(caso => {
+            const caseName = caso.replace(/^entrevistadx\//i, "");
+            caseCodeMap[caseName] = []; 
+        });
+
+        for (const [codePath, cites] of Object.entries(codeMapGlobal)) {
+            cites.forEach(cite => {
+                const pageParts = (cite.page || "").split('/');
+                if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+                    const caseName = pageParts[1];
+                    if (caseCodeMap[caseName] !== undefined) {
+                        const fullPath = `${caseName}/${codePath}`;
+                        if (!caseCodeMap[fullPath]) caseCodeMap[fullPath] = [];
+                        caseCodeMap[fullPath].push(cite);
                     }
-                    abrirPaginaPorTitulo(caso);
-                };
-                item.appendChild(goBtn);
-                
-                listCasosContainer.appendChild(item);
+                }
             });
         }
-        // Apply existing filter if any text is typed
+
+        casosTreeRoot = construirArbolCodigos(caseCodeMap);
+        fixCasosTreeFullNames(casosTreeRoot, true);
+
+        const rootUl = document.createElement("ul");
+        rootUl.style.paddingLeft = "0";
+        rootUl.style.margin = "0";
+        
+        if (casosTreeRoot && Object.keys(casosTreeRoot.children).length > 0) {
+            const childNamesSorted = Object.keys(casosTreeRoot.children).sort();
+            childNamesSorted.forEach(childName => {
+                rootUl.appendChild(renderCasoNodeHTML(casosTreeRoot.children[childName], true));
+            });
+        } else {
+            rootUl.innerHTML = "<li style='color: #a0aec0; padding: 10px;'>No hay códigos asociados a los casos.</li>";
+        }
+        
+        listCasosContainer.appendChild(rootUl);
+
         if (searchCasosInput.value) {
-            filtrarCasos(listCasosContainer, searchCasosInput.value);
+            filtrarArbolDOM(listCasosContainer, searchCasosInput.value);
         }
     }
 

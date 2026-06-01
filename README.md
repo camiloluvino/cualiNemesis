@@ -18,10 +18,15 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
 
 ### 2. 👥 Casos (Entidades Empíricas)
-* Lista de forma ordenada todas las páginas en el namespace de entrevistas/sujetos (prefijo `entrevistadx/`).
-* **Filtro de Casos Raíz:** Limpia automáticamente la visualización mostrando únicamente las entidades principales (ej. `entrevistadx/Castro`), ocultando subpáginas de transcripciones secundarias.
-* **Navegación Rápida:** Botón discreto `↗️ Ir a página` (visible al pasar el cursor) que abre instantáneamente el caso seleccionado en la interfaz principal de Roam y cierra el panel.
-* Buscador integrado en tiempo real para encontrar casos rápidamente.
+* Renderiza los casos y sus códigos en una estructura de tabla de árbol (TreeTable) interactiva y jerárquica de tres columnas: **Caso**, **Código** y **Citas**.
+* **Remoción de prefijos:** Limpia visualmente las páginas de casos eliminando el prefijo `entrevistadx/` para mostrar solo el nombre del entrevistado.
+* **Agrupación por Caso:** Agrupa todas las categorías y códigos cualitativos jerárquicamente bajo su respectivo caso, permitiendo ver de manera detallada qué códigos han sido aplicados a qué entrevistado y cuántas citas tienen.
+* **Exportación y selección masiva:**
+  * **Copiar al portapapeles:** Copia los casos y códigos seleccionados respetando la jerarquía para pegar directamente en Roam.
+  * **Crear nueva página:** Genera una página consolidada en Roam con las referencias de los bloques asociados.
+  * Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
+* **Navegación Rápida:** Botón discreto `↗️` (visible en hover) que abre instantáneamente el caso o código seleccionado en la interfaz principal de Roam y cierra el panel.
+* Buscador integrado en tiempo real para filtrar casos y códigos simultáneamente.
 
 ### 3. 🗺️ Codificación (Codebook Global)
 * Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`), Códigos (`cod/`) y Memos (`memo/`).

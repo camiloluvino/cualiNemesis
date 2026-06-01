@@ -1,6 +1,6 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Ajustes de Usabilidad y Navegación (V 0.5.0 - Local)
+## Fase Actual: Ajustes de Usabilidad y Navegación (V 0.6.0 - Local)
 
 ### Completado
 - [x] Consulta Datalog para extracción de bloques codificados en la página actual.
@@ -24,6 +24,9 @@
 - [x] **Visualización en Tabla de Árbol (TreeTable) (v0.5.0):** Evolución del diseño de árbol a una tabla de árbol de 3 columnas (Código, Citas, Fuentes) que optimiza el espacio y la lectura analítica.
 - [x] **Filtrado de Fuentes de Transcripción (v0.5.0):** Restricción en el conteo del Codebook global para considerar únicamente citas en páginas de transcripción activas (`entrevistadx/[Nombre]/transcripción/a analizar`), ignorando las páginas de codificación o referencia manual.
 - [x] **Visualización Simplificada de Entrevistados (v0.5.0):** Se extrae únicamente el nombre del entrevistado en la columna "Fuentes" y se restringe su visualización exclusivamente a los códigos de nivel hoja (nodos de último nivel) para evitar ruido visual en categorías superiores.
+- [x] **Agrupación Jerárquica y Vista TreeTable en Casos (v0.6.0):** Transformación de la pestaña "Casos" de un listado plano a un árbol interactivo en formato tabla (TreeTable) de 3 columnas (Caso, Código, Citas).
+- [x] **Remoción de Prefijos en Casos (v0.6.0):** Limpieza visual quitando el prefijo `entrevistadx/` en la columna "Caso" para un diseño más limpio.
+- [x] **Exportación y Control Masivo en Casos (v0.6.0):** Implementación de botones "Seleccionar todo", "Deseleccionar todo" y de exportación a portapapeles/página para la pestaña Casos, permitiendo consolidar la información agrupada por caso.
 
 
 
