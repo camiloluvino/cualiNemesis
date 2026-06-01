@@ -152,3 +152,29 @@ function refrescarCachesGlobales() {
     obtenerCodebookGlobal();
 }
 
+function obtenerReferenciasDeCodigos(titulos) {
+    if (!titulos || titulos.length === 0) return {};
+    const res = window.roamAlphaAPI.q(`
+        [:find ?title ?buid
+         :in $ [?title ...]
+         :where
+         [?p :node/title ?title]
+         [?b :block/refs ?p]
+         [?b :block/uid ?buid]
+        ]
+    `, titulos);
+    
+    const map = {};
+    titulos.forEach(t => map[t] = []);
+    
+    if (res) {
+        res.forEach(([title, buid]) => {
+            if (map[title]) {
+                map[title].push(buid);
+            }
+        });
+    }
+    return map;
+}
+
+

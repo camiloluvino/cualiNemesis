@@ -15,6 +15,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
   * **Copiar al portapapeles:** Genera un texto con tabulaciones listas para pegar en cualquier página de Roam conservando la jerarquía.
   * **Crear nueva página:** Crea automáticamente una página consolidada en Roam con referencias dinámicas de bloques `((UID))` organizados jerárquicamente.
 * Buscador interactivo integrado para filtrar códigos y citas en páginas densas.
+* Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
 
 ### 2. 👥 Casos (Entidades Empíricas)
 * Lista de forma ordenada todas las páginas en el namespace de entrevistas/sujetos (prefijo `entrevistadx/`).
@@ -24,10 +25,13 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 
 ### 3. 🗺️ Codificación (Codebook Global)
 * Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`), Códigos (`cod/`) y Memos (`memo/`).
-* Renderiza el Codebook global en una estructura de árbol interactivo con carpetas colapsables (`📁` / `📄`).
+* Renderiza el Codebook global en una estructura de árbol interactivo con checkboxes en cascada (marcado, desmarcado y estado indeterminado) para seleccionar nodos.
+* **Extracción global:** Permite consolidar citas de todo el grafo mediante:
+  * **Copiar al portapapeles:** Copia los códigos seleccionados y sus citas en formato árbol.
+  * **Crear nueva página:** Genera una página consolidada en Roam con referencias de bloque de todo el grafo para los códigos seleccionados.
 * **Navegación Rápida:** Botón discreto `↗️` en cada nodo (visible en hover) para ir a la página de ese código directamente.
 * **Filtro Inteligente de Descendientes:** Al buscar un código en el Codebook, la interfaz no solo muestra los ancestros (para dar contexto jerárquico), sino que **muestra y expande automáticamente todos sus descendientes**.
-* Botones de control global de `Expandir todo` y `Colapsar todo`.
+* Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
 
 ---
 

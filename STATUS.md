@@ -19,6 +19,9 @@
 - [x] **Filtrado de Casos Raíz (v0.4.1):** Exclusión de subpáginas en el listado de entrevistas para centrarse únicamente en las entidades raíz (ej: `entrevistadx/Castro`).
 - [x] **Navegación Rápida a Roam (v0.4.1):** Botón discreto (↗️) visible al pasar el cursor (hover) sobre cada caso y código para abrir directamente la página de Roam y cerrar el modal.
 - [x] **Filtro de Descendientes de Árbol (v0.4.1):** Al buscar en el Codebook, se muestran y expanden automáticamente todos los descendientes de los nodos coincidentes.
+- [x] **Selección y Extracción Global en Codebook (v0.4.2):** Habilitada la selección de códigos mediante casillas de verificación directamente en la pestaña de Codificación (Analítico), permitiendo extraer citas en todo el grafo (hacia portapapeles o nueva página).
+- [x] **Botones de Selección Masiva (v0.4.2):** Botones de "Seleccionar todo" y "Deseleccionar todo" añadidos en las barras de herramientas de las pestañas de Exportación Contextual y Codificación (Analítico).
+
 
 ### En Progreso / Tareas Inmediatas
 - [ ] Implementar entorno de pruebas locales (Mocking de bloques y páginas) independiente de Roam.
