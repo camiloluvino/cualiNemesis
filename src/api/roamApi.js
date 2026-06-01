@@ -103,7 +103,12 @@ function obtenerCasosGlobal() {
          [?p :node/title ?title] 
          [(clojure.string/starts-with? ?title "entrevistadx/")]]
     `);
-    cacheCasos = res.map(r => r[0]).sort();
+    cacheCasos = res.map(r => r[0])
+                    .filter(title => {
+                        const parts = title.split('/');
+                        return parts.length === 2 && parts[1].trim().length > 0;
+                    })
+                    .sort();
     return cacheCasos;
 }
 

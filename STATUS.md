@@ -1,6 +1,6 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Prototipado y Validación (V 0.2.0)
+## Fase Actual: Ajustes de Usabilidad y Navegación (V 0.4.1 - Local)
 
 ### Completado
 - [x] Consulta Datalog para extracción de bloques codificados en la página actual.
@@ -12,11 +12,17 @@
 - [x] Estructura de árbol jerárquico para procesamiento de códigos (`TreeNode`, `construirArbolCodigos`) (v0.2.0).
 - [x] UI de árbol interactivo con checkboxes en cascada y carpetas colapsables (v0.2.0).
 - [x] Exportador jerárquico recursivo en formato árbol para portapapeles y Roam Research (v0.2.0).
+- [x] Rediseño UI en 3 Pestañas (v0.3.0).
+- [x] **Ampliación del Panel (v0.4.0):** Modal expandido a `90vw` (máx. `1200px`) y `85vh` para acomodar visualizaciones complejas de datos.
+- [x] **Buscadores Interactivos (v0.4.0):** Filtros dinámicos en tiempo real en las tres pestañas (Casos, Codificación global y Exportación contextual).
+- [x] **Codebook como Árbol Jerárquico (v0.4.0):** Reconstrucción del listado global de códigos bajo una estructura unificada de árbol colapsable con soporte para filtros recursivos que preservan la jerarquía de los ancestros.
+- [x] **Filtrado de Casos Raíz (v0.4.1):** Exclusión de subpáginas en el listado de entrevistas para centrarse únicamente en las entidades raíz (ej: `entrevistadx/Castro`).
+- [x] **Navegación Rápida a Roam (v0.4.1):** Botón discreto (↗️) visible al pasar el cursor (hover) sobre cada caso y código para abrir directamente la página de Roam y cerrar el modal.
+- [x] **Filtro de Descendientes de Árbol (v0.4.1):** Al buscar en el Codebook, se muestran y expanden automáticamente todos los descendientes de los nodos coincidentes.
 
 ### En Progreso / Tareas Inmediatas
 - [ ] Implementar entorno de pruebas locales (Mocking de bloques y páginas) independiente de Roam.
 
 ### Roadmap (Próximas Funcionalidades)
-- [ ] **Dashboard del Codebook:** Panel para listar todos los códigos activos en el grafo y visualizar frecuencias/fundamentación.
 - [ ] **Matriz de Co-ocurrencia:** Herramienta para identificar bloques que contienen múltiples códigos simultáneamente (cruces analíticos).
 - [ ] **Parámetros de contexto:** Toggles en la interfaz para incluir "bloque padre" o "bloques hijos" en la extracción, ampliando el contexto de la cita.

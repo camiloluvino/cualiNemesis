@@ -1,6 +1,6 @@
 # Script de construcción para CualiNemesis
 
-$version = "0.3.0"
+$version = "0.4.1"
 
 $outputFile = Join-Path $PSScriptRoot "cualiNemesisMaster.js"
 $srcDir = Join-Path $PSScriptRoot "src"
