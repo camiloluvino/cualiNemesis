@@ -1,8 +1,10 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Rediseño Estético y Usabilidad (V 0.6.2 - Local)
+## Fase Actual: Rediseño Estético, Usabilidad y Compactación (V 0.6.3)
 
 ### Completado
+- [x] **Compactación de Elementos de Interfaz (v0.6.3):** Reducción de márgenes y paddings en el modal general, encabezados, pestañas, buscador y toolbar para maximizar el área de trabajo y permitir una visualización panorámica óptima.
+- [x] **Eliminación de Resaltado Hover en Filas (v0.6.3):** Remoción de los cambios de color y transformaciones de desplazamiento al pasar el ratón por encima de los elementos de la tabla para evitar fatiga y distracciones visuales, manteniendo el botón `↗` oculto hasta hacer hover.
 - [x] Consulta Datalog para extracción de bloques codificados en la página actual.
 - [x] Lógica de filtrado de códigos basada en expresiones regulares y namespaces (`/`).
 - [x] Interfaz de usuario modal para selección de códigos a procesar.
