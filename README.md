@@ -14,8 +14,10 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Exportación dual:**
   * **Copiar al portapapeles:** Genera un texto con tabulaciones listas para pegar en cualquier página de Roam conservando la jerarquía.
   * **Crear nueva página:** Crea automáticamente una página consolidada en Roam con referencias dinámicas de bloques `((UID))` organizados jerárquicamente.
-* Buscador interactivo integrado para filtrar códigos y citas en páginas densas.
-* Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
+* **Buscador interactivo con selección transversal:**
+  * Filtra códigos y citas en tiempo real.
+  * **Auto-selección al exportar:** Si hay texto en el buscador al hacer clic en exportar (Copiar/Crear página), se seleccionan automáticamente solo los nodos coincidentes de forma transversal.
+* **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (🔍).
 
 ### 2. 👥 Casos (Entidades Empíricas)
 * Renderiza los casos y sus códigos en una estructura de tabla de árbol (TreeTable) interactiva y jerárquica de tres columnas: **Caso**, **Código** y **Citas**.
@@ -24,7 +26,8 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Exportación y selección masiva:**
   * **Copiar al portapapeles:** Copia los casos y códigos seleccionados respetando la jerarquía para pegar directamente en Roam.
   * **Crear nueva página:** Genera una página consolidada en Roam con las referencias de los bloques asociados.
-  * Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
+  * **Auto-selección al exportar:** Al exportar con un término de búsqueda activo, pre-selecciona automáticamente los nodos que coinciden con el filtro de forma transversal.
+  * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (🔍).
 * **Navegación Rápida:** Botón discreto `↗️` (visible en hover) que abre instantáneamente el caso o código seleccionado en la interfaz principal de Roam y cierra el panel.
 * Buscador integrado en tiempo real para filtrar casos y códigos simultáneamente.
 
@@ -35,12 +38,13 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
   * **Conteo empírico estricto:** Solo se contabilizan y muestran citas provenientes de páginas con formato `entrevistadx/[Nombre]/transcripción/a analizar`, ignorando páginas de referencia manual o codificación.
   * **Formato limpio:** Se extrae solo el nombre del entrevistado en formato de etiqueta compacta (chip visual).
   * **Especificidad en hoja:** Las etiquetas de fuentes se muestran únicamente en los códigos del último nivel jerárquico (nodos hoja) para no saturar las categorías y carpetas padre.
-* **Extracción global:** Permite consolidar citas de todo el grafo mediante:
+* **Extracción global y selección inteligente:**
   * **Copiar al portapapeles:** Copia los códigos seleccionados y sus citas en formato árbol.
   * **Crear nueva página:** Genera una página consolidada en Roam con referencias de bloque de todo el grafo para los códigos seleccionados.
+  * **Auto-selección al exportar:** Pre-selecciona de manera inteligente los nodos coincidentes con la búsqueda al usar cualquiera de los botones de exportación.
+  * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (🔍).
 * **Navegación Rápida:** Botón discreto `↗️` en cada nodo (visible en hover) para ir a la página de ese código directamente.
 * **Filtro Inteligente de Descendientes:** Al buscar un código en el Codebook, la interfaz no solo muestra los ancestros (para dar contexto jerárquico), sino que **muestra y expande automáticamente todos sus descendientes**.
-* Botones de control global: `Expandir todo`, `Colapsar todo`, `Seleccionar todo` y `Deseleccionar todo`.
 
 ---
 

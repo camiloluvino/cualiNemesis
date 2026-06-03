@@ -3,6 +3,8 @@
 ## Fase Actual: Rediseño Estético, Usabilidad y Compactación (V 0.6.3)
 
 ### Completado
+- [x] **Selección Transversal por Búsqueda (v0.6.4):** Añadido el botón `🔍 Seleccionar filtrados` en las tres pestañas del panel analítico. Permite seleccionar de forma transversal todos los códigos/casos que coincidan con la cadena del buscador.
+- [x] **Auto-selección en Exportación (v0.6.4):** Integrada la selección transversal inteligente directamente en los botones de exportación (Copiar al portapapeles y Crear nueva página). Si el buscador de la pestaña tiene texto, se pre-seleccionan de forma automática los nodos coincidentes antes de exportar, manteniendo la jerarquía estructurada.
 - [x] **Compactación de Elementos de Interfaz (v0.6.3):** Reducción de márgenes y paddings en el modal general, encabezados, pestañas, buscador y toolbar para maximizar el área de trabajo y permitir una visualización panorámica óptima.
 - [x] **Eliminación de Resaltado Hover en Filas (v0.6.3):** Remoción de los cambios de color y transformaciones de desplazamiento al pasar el ratón por encima de los elementos de la tabla para evitar fatiga y distracciones visuales, manteniendo el botón `↗` oculto hasta hacer hover.
 - [x] Consulta Datalog para extracción de bloques codificados en la página actual.

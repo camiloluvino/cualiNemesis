@@ -647,6 +647,38 @@ function filtrarCasos(container, query) {
     });
 }
 
+function seleccionarNodosFiltrados(container, query, rootNodeObj) {
+    const q = query.toLowerCase().trim();
+    if (!q) {
+        mostrarNotificacion("Escribe un término de búsqueda para filtrar y seleccionar.");
+        return;
+    }
+
+    if (rootNodeObj) updateNodeCheckedState(rootNodeObj, false);
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+        cb.indeterminate = false;
+        if (cb._node) cb._node.checked = false;
+    });
+
+    let checkCount = 0;
+    checkboxes.forEach(cb => {
+        if (!cb._node) return;
+        if (cb._node.name.toLowerCase().includes(q)) {
+            cb.checked = true;
+            cb._node.checked = true;
+            checkCount++;
+        }
+    });
+
+    if (checkCount > 0) {
+        mostrarNotificacion(`Seleccionados ${checkCount} códigos coincidentes.`);
+    } else {
+        mostrarNotificacion("No se encontraron coincidencias para seleccionar.");
+    }
+}
+
 function crearInterfazModal(rootNode, pageTitle) {
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
@@ -1106,10 +1138,19 @@ function crearInterfazModal(rootNode, pageTitle) {
         });
     };
 
+    const btnSelectFiltered = document.createElement("button");
+    btnSelectFiltered.className = "cuali-btn-tool";
+    btnSelectFiltered.innerText = "🔍 Seleccionar filtrados";
+    btnSelectFiltered.onclick = (e) => {
+        e.preventDefault();
+        seleccionarNodosFiltrados(treeContainer, searchExportInput.value, rootNode);
+    };
+
     toolbarLeft.appendChild(btnExpandAll);
     toolbarLeft.appendChild(btnCollapseAll);
     toolbarLeft.appendChild(btnSelectAll);
     toolbarLeft.appendChild(btnDeselectAll);
+    toolbarLeft.appendChild(btnSelectFiltered);
     toolbar.appendChild(toolbarLeft);
 
     const searchExportInput = document.createElement("input");
@@ -1159,6 +1200,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     btnClipboard.innerText = "Copiar al portapapeles";
     btnClipboard.onclick = async (e) => {
         e.preventDefault();
+        if (searchExportInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(treeContainer, searchExportInput.value, rootNode);
+        }
         if (!rootNode || !nodoSeleccionadoOHijosSeleccionados(rootNode)) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
@@ -1178,6 +1222,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     btnPage.innerText = "Crear nueva página";
     btnPage.onclick = async (e) => {
         e.preventDefault();
+        if (searchExportInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(treeContainer, searchExportInput.value, rootNode);
+        }
         if (!rootNode || !nodoSeleccionadoOHijosSeleccionados(rootNode)) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
@@ -1250,11 +1297,20 @@ function crearInterfazModal(rootNode, pageTitle) {
             if (cb._node) cb._node.checked = false;
         });
     };
+
+    const btnCasosSelectFiltered = document.createElement("button");
+    btnCasosSelectFiltered.className = "cuali-btn-tool";
+    btnCasosSelectFiltered.innerText = "🔍 Seleccionar filtrados";
+    btnCasosSelectFiltered.onclick = (e) => {
+        e.preventDefault();
+        seleccionarNodosFiltrados(listCasosContainer, searchCasosInput.value, casosTreeRoot);
+    };
     
     toolbarCasosLeft.appendChild(btnExpandCasos);
     toolbarCasosLeft.appendChild(btnCollapseCasos);
     toolbarCasosLeft.appendChild(btnCasosSelectAll);
     toolbarCasosLeft.appendChild(btnCasosDeselectAll);
+    toolbarCasosLeft.appendChild(btnCasosSelectFiltered);
     toolbarCasos.appendChild(toolbarCasosLeft);
 
     const toolbarCasosRight = document.createElement("div");
@@ -1304,6 +1360,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     btnCasosClipboard.innerText = "Copiar al portapapeles";
     btnCasosClipboard.onclick = async (e) => {
         e.preventDefault();
+        if (searchCasosInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(listCasosContainer, searchCasosInput.value, casosTreeRoot);
+        }
         if (!casosTreeRoot || !nodoSeleccionadoOHijosSeleccionados(casosTreeRoot)) {
             mostrarNotificacion("Selecciona al menos un caso o código.");
             return;
@@ -1323,6 +1382,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     btnCasosPage.innerText = "Crear nueva página";
     btnCasosPage.onclick = async (e) => {
         e.preventDefault();
+        if (searchCasosInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(listCasosContainer, searchCasosInput.value, casosTreeRoot);
+        }
         if (!casosTreeRoot || !nodoSeleccionadoOHijosSeleccionados(casosTreeRoot)) {
             mostrarNotificacion("Selecciona al menos un caso o código.");
             return;
@@ -1475,10 +1537,19 @@ function crearInterfazModal(rootNode, pageTitle) {
         });
     };
 
+    const btnCodebookSelectFiltered = document.createElement("button");
+    btnCodebookSelectFiltered.className = "cuali-btn-tool";
+    btnCodebookSelectFiltered.innerText = "🔍 Seleccionar filtrados";
+    btnCodebookSelectFiltered.onclick = (e) => {
+        e.preventDefault();
+        seleccionarNodosFiltrados(listCodebookContainer, searchCodebookInput.value, codebookTreeRoot);
+    };
+
     toolbarCodebookLeft.appendChild(btnExpandCodebook);
     toolbarCodebookLeft.appendChild(btnCollapseCodebook);
     toolbarCodebookLeft.appendChild(btnCodebookSelectAll);
     toolbarCodebookLeft.appendChild(btnCodebookDeselectAll);
+    toolbarCodebookLeft.appendChild(btnCodebookSelectFiltered);
     toolbarCodebook.appendChild(toolbarCodebookLeft);
     
     const btnRefreshCodebook = document.createElement("button");
@@ -1520,6 +1591,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     btnCodebookClipboard.innerText = "Copiar al portapapeles";
     btnCodebookClipboard.onclick = async (e) => {
         e.preventDefault();
+        if (searchCodebookInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(listCodebookContainer, searchCodebookInput.value, codebookTreeRoot);
+        }
         if (!codebookTreeRoot || !nodoSeleccionadoOHijosSeleccionados(codebookTreeRoot)) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
@@ -1539,6 +1613,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     btnCodebookPage.innerText = "Crear nueva página";
     btnCodebookPage.onclick = async (e) => {
         e.preventDefault();
+        if (searchCodebookInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(listCodebookContainer, searchCodebookInput.value, codebookTreeRoot);
+        }
         if (!codebookTreeRoot || !nodoSeleccionadoOHijosSeleccionados(codebookTreeRoot)) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
