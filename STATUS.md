@@ -1,6 +1,6 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Rediseño Estético y Usabilidad (V 0.6.1 - Local)
+## Fase Actual: Rediseño Estético y Usabilidad (V 0.6.2 - Local)
 
 ### Completado
 - [x] Consulta Datalog para extracción de bloques codificados en la página actual.
@@ -28,12 +28,17 @@
 - [x] **Remoción de Prefijos en Casos (v0.6.0):** Limpieza visual quitando el prefijo `entrevistadx/` en la columna "Caso" para un diseño más limpio.
 - [x] **Exportación y Control Masivo en Casos (v0.6.0):** Implementación de botones "Seleccionar todo", "Deseleccionar todo" y de exportación a portapapeles/página para la pestaña Casos, permitiendo consolidar la información agrupada por caso.
 - [x] **Rediseño Estético Elegante y Aireado (v0.6.1):** Adopción de la tipografía Serif `Georgia` para encabezados principales, mayor espaciado (padding vertical) en filas de nodos, fuentes más delgadas y visualmente ligeras.
-- [x] **Paleta Desaturada Claro Marfil (v0.6.1):** Fondo marfil (`#fcfcfa`) y arena (`#f2f1ed`) ultra suaves y desaturados para mitigar la fatiga visual.
+- [x] **Paleta Desaturada Claro Marfil (v0.6.1):** Fondo marfil (`#fcfcfa`) and arena (`#f2f1ed`) ultra suaves y desaturados para mitigar la fatiga visual.
 - [x] **Limpieza de Emojis Chillonas (v0.6.1):** Eliminación de emojis de carpetas amarillas y documentos en las listas del árbol para mayor sobriedad.
 - [x] **Botones Outlined Sutiles (v0.6.1):** Reemplazo de fondos sólidos y pesados de botones por bordes finos de color y fondos translúcidos elegantes.
 - [x] **Optimización de Altura de Listas (v0.6.1):** Ajuste de la altura total a `90vh` y compresión de márgenes de elementos secundarios para maximizar la superficie de visualización útil de los paneles de códigos y casos.
 - [x] **Separación Visual de Columnas (v0.6.1):** Incorporación de bordes verticales de división y márgenes de alineación (padding) en las tablas de todas las pestañas para mayor legibilidad y claridad analítica.
 - [x] **Pestañas Más Prominentes (v0.6.1):** Ajuste de peso tipográfico (font-weight: 600 inactivas / 700 activa) en las pestañas de navegación principal para diferenciarlas fácilmente del contenido de las tablas.
+- [x] **Toolbar de Acciones con Iconos Unicode (v0.6.2):** Incorporación de iconos contextuales (`⊞`, `⊟`, `☑`, `☐`) y bordes sutiles en los botones de herramientas para diferenciarlos claramente del contenido.
+- [x] **Jerarquía Visual del Árbol de Datos (v0.6.2):** Diferenciación visual de nodos según su profundidad (`depth`), con fondos sutiles y textos en negrita para la raíz (Nivel 0) y tamaños de fuente reducidos con colores atenuados para subcódigos.
+- [x] **Líneas de Conexión Continuas (v0.6.2):** Reemplazo de líneas discontinuas en el árbol por líneas sólidas finas para un flujo visual más limpio.
+- [x] **Alineación de Números Monospaciados (v0.6.2):** Uso de fuentes `monospace` y `tabular-nums` en la columna de conteo de citas para una alineación y legibilidad óptimas.
+- [x] **Checkboxes Estilizados en Azul Solarized (v0.6.2):** Adición de la propiedad `accent-color` de forma global para que las casillas adopten el tono azul corporativo de la interfaz.
 
 ### En Progreso / Tareas Inmediatas
 - [ ] Implementar entorno de pruebas locales (Mocking de bloques y páginas) independiente de Roam.

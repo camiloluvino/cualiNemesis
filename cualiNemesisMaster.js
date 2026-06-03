@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-03 14:57:07
+﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-03 15:11:59
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -342,7 +342,7 @@ function getAggregateSources(node) {
     return sources;
 }
 
-function renderNodeHTML(node, hideSources = false) {
+function renderNodeHTML(node, hideSources = false, depth = 0) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
     li.style.margin = "2px 0";
@@ -424,12 +424,24 @@ function renderNodeHTML(node, hideSources = false) {
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
     labelSpan.innerText = node.name;
-    labelSpan.style.fontSize = "14px";
-    labelSpan.style.color = "var(--sol-base01)";
     labelSpan.style.cursor = "pointer";
     labelSpan.style.textOverflow = "ellipsis";
     labelSpan.style.overflow = "hidden";
     labelSpan.style.whiteSpace = "nowrap";
+    if (depth === 0) {
+        labelSpan.style.fontWeight = "600";
+        labelSpan.style.fontSize = "14px";
+        labelSpan.style.color = "var(--sol-base01)";
+        rowDiv.classList.add("node-depth-0");
+    } else if (depth === 1) {
+        labelSpan.style.fontWeight = "500";
+        labelSpan.style.fontSize = "14px";
+        labelSpan.style.color = "var(--sol-base01)";
+    } else {
+        labelSpan.style.fontWeight = "400";
+        labelSpan.style.fontSize = "13px";
+        labelSpan.style.color = "var(--sol-base1)";
+    }
     labelSpan.onclick = () => {
         checkbox.click();
     };
@@ -519,14 +531,14 @@ function renderNodeHTML(node, hideSources = false) {
     if (hasChildren) {
         const ul = document.createElement("ul");
         ul.style.paddingLeft = "20px";
-        ul.style.borderLeft = "1px dashed var(--sol-base1)";
+        ul.style.borderLeft = "1px solid rgba(147, 161, 161, 0.3)";
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
-            ul.appendChild(renderNodeHTML(node.children[childName], hideSources));
+            ul.appendChild(renderNodeHTML(node.children[childName], hideSources, depth + 1));
         });
         li.appendChild(ul);
     }
@@ -613,7 +625,7 @@ function renderCodebookNodeHTML(node) {
     if (hasChildren) {
         const ul = document.createElement("ul");
         ul.style.paddingLeft = "20px";
-        ul.style.borderLeft = "1px dashed var(--sol-base1)";
+        ul.style.borderLeft = "1px solid rgba(147, 161, 161, 0.3)";
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
@@ -628,7 +640,7 @@ function renderCodebookNodeHTML(node) {
     return li;
 }
 
-function renderCasoNodeHTML(node, isCase = false) {
+function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
     li.style.margin = "2px 0";
@@ -737,12 +749,24 @@ function renderCasoNodeHTML(node, isCase = false) {
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
     labelSpan.innerText = node.name;
-    labelSpan.style.fontSize = "14px";
-    labelSpan.style.color = "var(--sol-base01)";
     labelSpan.style.cursor = "pointer";
     labelSpan.style.textOverflow = "ellipsis";
     labelSpan.style.overflow = "hidden";
     labelSpan.style.whiteSpace = "nowrap";
+    if (depth === 0) {
+        labelSpan.style.fontWeight = "600";
+        labelSpan.style.fontSize = "14px";
+        labelSpan.style.color = "var(--sol-base01)";
+        rowDiv.classList.add("node-depth-0");
+    } else if (depth === 1) {
+        labelSpan.style.fontWeight = "500";
+        labelSpan.style.fontSize = "14px";
+        labelSpan.style.color = "var(--sol-base01)";
+    } else {
+        labelSpan.style.fontWeight = "400";
+        labelSpan.style.fontSize = "13px";
+        labelSpan.style.color = "var(--sol-base1)";
+    }
     labelSpan.onclick = () => {
         checkbox.click();
     };
@@ -792,14 +816,14 @@ function renderCasoNodeHTML(node, isCase = false) {
     if (hasChildren) {
         const ul = document.createElement("ul");
         ul.style.paddingLeft = "20px";
-        ul.style.borderLeft = "1px dashed var(--sol-base1)";
+        ul.style.borderLeft = "1px solid rgba(147, 161, 161, 0.3)";
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
-            ul.appendChild(renderCasoNodeHTML(node.children[childName], false));
+            ul.appendChild(renderCasoNodeHTML(node.children[childName], false, depth + 1));
         });
         li.appendChild(ul);
     }
@@ -1077,9 +1101,11 @@ function crearInterfazModal(rootNode, pageTitle) {
             width: 100px;
             text-align: center;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             color: var(--sol-base00);
             flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
         .node-sources-col {
             width: 300px;
@@ -1163,11 +1189,12 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
         .cuali-btn-tool {
             background: transparent;
-            border: none;
+            border: 1px solid rgba(147, 161, 161, 0.2);
+            border-radius: 4px;
             color: var(--sol-base1);
             cursor: pointer;
             font-size: 13px;
-            font-weight: 400;
+            font-weight: 500;
             padding: 4px 8px;
             transition: all 0.2s ease;
             display: inline-flex;
@@ -1240,6 +1267,17 @@ function crearInterfazModal(rootNode, pageTitle) {
             border-color: #1e71ab;
         }
         /* hover logic cleaned up */
+
+        input[type="checkbox"] {
+            accent-color: var(--sol-blue);
+            cursor: pointer;
+        }
+        .node-depth-0 {
+            background-color: rgba(242, 241, 237, 0.4);
+        }
+        .node-depth-0:hover {
+            background-color: var(--sol-base2);
+        }
     `;
     document.head.appendChild(styleTag);
 
@@ -1300,7 +1338,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnExpandAll = document.createElement("button");
     btnExpandAll.className = "cuali-btn-tool";
-    btnExpandAll.innerText = "Expandir todo";
+    btnExpandAll.innerText = "⊞ Expandir todo";
     btnExpandAll.onclick = (e) => {
         e.preventDefault();
         const uls = treeContainer.querySelectorAll("ul");
@@ -1311,7 +1349,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCollapseAll = document.createElement("button");
     btnCollapseAll.className = "cuali-btn-tool";
-    btnCollapseAll.innerText = "Colapsar todo";
+    btnCollapseAll.innerText = "⊟ Colapsar todo";
     btnCollapseAll.onclick = (e) => {
         e.preventDefault();
         const uls = treeContainer.querySelectorAll("ul");
@@ -1326,7 +1364,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnSelectAll = document.createElement("button");
     btnSelectAll.className = "cuali-btn-tool";
-    btnSelectAll.innerText = "Seleccionar todo";
+    btnSelectAll.innerText = "☑ Seleccionar todo";
     btnSelectAll.onclick = (e) => {
         e.preventDefault();
         if (rootNode) updateNodeCheckedState(rootNode, true);
@@ -1340,7 +1378,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnDeselectAll = document.createElement("button");
     btnDeselectAll.className = "cuali-btn-tool";
-    btnDeselectAll.innerText = "Deseleccionar todo";
+    btnDeselectAll.innerText = "☐ Deseleccionar todo";
     btnDeselectAll.onclick = (e) => {
         e.preventDefault();
         if (rootNode) updateNodeCheckedState(rootNode, false);
@@ -1384,7 +1422,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     if (rootNode && Object.keys(rootNode.children).length > 0) {
         const childNamesSorted = Object.keys(rootNode.children).sort();
         childNamesSorted.forEach(childName => {
-            rootUl.appendChild(renderNodeHTML(rootNode.children[childName], true));
+            rootUl.appendChild(renderNodeHTML(rootNode.children[childName], true, 0));
         });
     } else {
         rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos en la página activa.</li>";
@@ -1445,7 +1483,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     
     const btnExpandCasos = document.createElement("button");
     btnExpandCasos.className = "cuali-btn-tool";
-    btnExpandCasos.innerText = "Expandir todo";
+    btnExpandCasos.innerText = "⊞ Expandir todo";
     btnExpandCasos.onclick = (e) => {
         e.preventDefault();
         const uls = listCasosContainer.querySelectorAll("ul");
@@ -1456,7 +1494,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCollapseCasos = document.createElement("button");
     btnCollapseCasos.className = "cuali-btn-tool";
-    btnCollapseCasos.innerText = "Colapsar todo";
+    btnCollapseCasos.innerText = "⊟ Colapsar todo";
     btnCollapseCasos.onclick = (e) => {
         e.preventDefault();
         const uls = listCasosContainer.querySelectorAll("ul");
@@ -1471,7 +1509,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCasosSelectAll = document.createElement("button");
     btnCasosSelectAll.className = "cuali-btn-tool";
-    btnCasosSelectAll.innerText = "Seleccionar todo";
+    btnCasosSelectAll.innerText = "☑ Seleccionar todo";
     btnCasosSelectAll.onclick = (e) => {
         e.preventDefault();
         if (casosTreeRoot) updateNodeCheckedState(casosTreeRoot, true);
@@ -1485,7 +1523,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCasosDeselectAll = document.createElement("button");
     btnCasosDeselectAll.className = "cuali-btn-tool";
-    btnCasosDeselectAll.innerText = "Deseleccionar todo";
+    btnCasosDeselectAll.innerText = "☐ Deseleccionar todo";
     btnCasosDeselectAll.onclick = (e) => {
         e.preventDefault();
         if (casosTreeRoot) updateNodeCheckedState(casosTreeRoot, false);
@@ -1647,7 +1685,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         if (casosTreeRoot && Object.keys(casosTreeRoot.children).length > 0) {
             const childNamesSorted = Object.keys(casosTreeRoot.children).sort();
             childNamesSorted.forEach(childName => {
-                rootUl.appendChild(renderCasoNodeHTML(casosTreeRoot.children[childName], true));
+                rootUl.appendChild(renderCasoNodeHTML(casosTreeRoot.children[childName], true, 0));
             });
         } else {
             rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos asociados a los casos.</li>";
@@ -1669,7 +1707,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     
     const btnExpandCodebook = document.createElement("button");
     btnExpandCodebook.className = "cuali-btn-tool";
-    btnExpandCodebook.innerText = "Expandir todo";
+    btnExpandCodebook.innerText = "⊞ Expandir todo";
     btnExpandCodebook.onclick = (e) => {
         e.preventDefault();
         const uls = listCodebookContainer.querySelectorAll("ul");
@@ -1680,7 +1718,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCollapseCodebook = document.createElement("button");
     btnCollapseCodebook.className = "cuali-btn-tool";
-    btnCollapseCodebook.innerText = "Colapsar todo";
+    btnCollapseCodebook.innerText = "⊟ Colapsar todo";
     btnCollapseCodebook.onclick = (e) => {
         e.preventDefault();
         const uls = listCodebookContainer.querySelectorAll("ul");
@@ -1695,7 +1733,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCodebookSelectAll = document.createElement("button");
     btnCodebookSelectAll.className = "cuali-btn-tool";
-    btnCodebookSelectAll.innerText = "Seleccionar todo";
+    btnCodebookSelectAll.innerText = "☑ Seleccionar todo";
     btnCodebookSelectAll.onclick = (e) => {
         e.preventDefault();
         if (codebookTreeRoot) updateNodeCheckedState(codebookTreeRoot, true);
@@ -1709,7 +1747,7 @@ function crearInterfazModal(rootNode, pageTitle) {
 
     const btnCodebookDeselectAll = document.createElement("button");
     btnCodebookDeselectAll.className = "cuali-btn-tool";
-    btnCodebookDeselectAll.innerText = "Deseleccionar todo";
+    btnCodebookDeselectAll.innerText = "☐ Deseleccionar todo";
     btnCodebookDeselectAll.onclick = (e) => {
         e.preventDefault();
         if (codebookTreeRoot) updateNodeCheckedState(codebookTreeRoot, false);
@@ -1816,7 +1854,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         if (codebookTreeRoot && Object.keys(codebookTreeRoot.children).length > 0) {
             const childNamesSorted = Object.keys(codebookTreeRoot.children).sort();
             childNamesSorted.forEach(childName => {
-                rootUl.appendChild(renderNodeHTML(codebookTreeRoot.children[childName]));
+                rootUl.appendChild(renderNodeHTML(codebookTreeRoot.children[childName], false, 0));
             });
         } else {
             rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos en el codebook.</li>";
