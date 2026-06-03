@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-03 15:11:59
+﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-03 15:25:18
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -345,7 +345,7 @@ function getAggregateSources(node) {
 function renderNodeHTML(node, hideSources = false, depth = 0) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
-    li.style.margin = "2px 0";
+    li.style.margin = "0px 0";
 
     const rowDiv = document.createElement("div");
     rowDiv.className = "node-row";
@@ -353,7 +353,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
     rowDiv.style.alignItems = "center";
     rowDiv.style.justifyContent = "space-between";
     rowDiv.style.width = "100%";
-    rowDiv.style.padding = "8px 16px";
+    rowDiv.style.padding = "4px 12px";
     rowDiv.style.transition = "all 0.2s ease";
     rowDiv.style.borderBottom = "1px solid var(--sol-base2)";
 
@@ -549,13 +549,13 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
 function renderCodebookNodeHTML(node) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
-    li.style.margin = "4px 0";
+    li.style.margin = "0px 0";
 
     const headerDiv = document.createElement("div");
     headerDiv.className = "node-header";
     headerDiv.style.display = "flex";
     headerDiv.style.alignItems = "center";
-    headerDiv.style.padding = "8px 16px";
+    headerDiv.style.padding = "4px 12px";
     headerDiv.style.transition = "background-color 0.15s ease";
 
     const hasChildren = Object.keys(node.children).length > 0;
@@ -643,7 +643,7 @@ function renderCodebookNodeHTML(node) {
 function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
-    li.style.margin = "2px 0";
+    li.style.margin = "0px 0";
 
     const rowDiv = document.createElement("div");
     rowDiv.className = "node-row";
@@ -651,7 +651,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     rowDiv.style.alignItems = "center";
     rowDiv.style.justifyContent = "space-between";
     rowDiv.style.width = "100%";
-    rowDiv.style.padding = "8px 16px";
+    rowDiv.style.padding = "4px 12px";
     rowDiv.style.transition = "all 0.2s ease";
     rowDiv.style.borderBottom = "1px solid var(--sol-base2)";
 
@@ -953,7 +953,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
         .cuali-modal {
             background: var(--sol-base3);
-            padding: 20px 32px;
+            padding: 16px 24px;
             border-radius: 16px;
             width: 90vw;
             max-width: 1200px;
@@ -970,13 +970,13 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
         .cuali-header {
             font-family: Georgia, serif;
-            font-size: 1.65rem;
+            font-size: 1.3rem;
             font-weight: 400;
             color: var(--sol-base02);
             margin-top: 0;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             border-bottom: 1px solid rgba(147, 161, 161, 0.2);
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             letter-spacing: 0.02em;
         }
         
@@ -984,11 +984,11 @@ function crearInterfazModal(rootNode, pageTitle) {
         .cuali-tabs {
             display: flex;
             border-bottom: 1px solid rgba(147, 161, 161, 0.2);
-            margin-bottom: 16px;
-            gap: 16px;
+            margin-bottom: 10px;
+            gap: 12px;
         }
         .cuali-tab-btn {
-            padding: 6px 12px 10px 12px;
+            padding: 4px 8px 8px 8px;
             background: transparent;
             border: none;
             border-bottom: 2px solid transparent;
@@ -1039,12 +1039,6 @@ function crearInterfazModal(rootNode, pageTitle) {
             justify-content: space-between;
             transition: all 0.2s ease;
         }
-        .cuali-list-item:hover {
-            background-color: var(--sol-base2);
-            border-radius: 4px;
-            transform: translateX(3px);
-            color: var(--sol-base02);
-        }
         .cuali-list-item:last-child {
             border-bottom: none;
         }
@@ -1066,7 +1060,7 @@ function crearInterfazModal(rootNode, pageTitle) {
             color: var(--sol-base01);
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            padding: 10px 16px;
+            padding: 6px 12px;
             background-color: rgba(147, 161, 161, 0.22);
             border: 1px solid rgba(147, 161, 161, 0.15);
             border-bottom: 2.5px solid rgba(147, 161, 161, 0.35);
@@ -1090,11 +1084,6 @@ function crearInterfazModal(rootNode, pageTitle) {
         .node-row {
             border-bottom: 1px solid rgba(147, 161, 161, 0.1);
             transition: all 0.2s ease;
-        }
-        .node-row:hover {
-            background-color: var(--sol-base2);
-            border-radius: 4px;
-            transform: translateX(3px);
         }
 
         .node-cites-col {
@@ -1155,8 +1144,8 @@ function crearInterfazModal(rootNode, pageTitle) {
         /* Search Inputs */
         .cuali-search-input {
             width: 100%;
-            padding: 10px 14px;
-            margin-bottom: 10px;
+            padding: 6px 12px;
+            margin-bottom: 6px;
             border: 1px solid rgba(147, 161, 161, 0.2);
             border-radius: 8px;
             font-size: 14px;
@@ -1181,7 +1170,7 @@ function crearInterfazModal(rootNode, pageTitle) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .cuali-toolbar-left {
             display: flex;
@@ -1193,9 +1182,9 @@ function crearInterfazModal(rootNode, pageTitle) {
             border-radius: 4px;
             color: var(--sol-base1);
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
-            padding: 4px 8px;
+            padding: 2px 6px;
             transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
@@ -1213,10 +1202,10 @@ function crearInterfazModal(rootNode, pageTitle) {
             display: flex;
             justify-content: flex-end;
             gap: 12px;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         .cuali-btn {
-            padding: 10px 24px;
+            padding: 8px 20px;
             border-radius: 8px;
             font-weight: 500;
             font-size: 14px;
@@ -1274,9 +1263,6 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
         .node-depth-0 {
             background-color: rgba(242, 241, 237, 0.4);
-        }
-        .node-depth-0:hover {
-            background-color: var(--sol-base2);
         }
     `;
     document.head.appendChild(styleTag);
@@ -1880,7 +1866,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     const globalFooter = document.createElement("div");
     globalFooter.style.display = "flex";
     globalFooter.style.justifyContent = "flex-start";
-    globalFooter.style.marginTop = "10px";
+    globalFooter.style.marginTop = "8px";
     
     const btnCancelGlobal = document.createElement("button");
     btnCancelGlobal.className = "cuali-btn cuali-btn-cancel";
