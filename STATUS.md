@@ -32,6 +32,8 @@
 - [x] **Limpieza de Emojis Chillonas (v0.6.1):** Eliminación de emojis de carpetas amarillas y documentos en las listas del árbol para mayor sobriedad.
 - [x] **Botones Outlined Sutiles (v0.6.1):** Reemplazo de fondos sólidos y pesados de botones por bordes finos de color y fondos translúcidos elegantes.
 - [x] **Optimización de Altura de Listas (v0.6.1):** Ajuste de la altura total a `90vh` y compresión de márgenes de elementos secundarios para maximizar la superficie de visualización útil de los paneles de códigos y casos.
+- [x] **Separación Visual de Columnas (v0.6.1):** Incorporación de bordes verticales de división y márgenes de alineación (padding) en las tablas de todas las pestañas para mayor legibilidad y claridad analítica.
+- [x] **Pestañas Más Prominentes (v0.6.1):** Ajuste de peso tipográfico (font-weight: 600 inactivas / 700 activa) en las pestañas de navegación principal para diferenciarlas fácilmente del contenido de las tablas.
 
 ### En Progreso / Tareas Inmediatas
 - [ ] Implementar entorno de pruebas locales (Mocking de bloques y páginas) independiente de Roam.

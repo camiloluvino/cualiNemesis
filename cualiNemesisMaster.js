@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-01 01:56:31
+﻿// CualiNemesis v0.6.1 - Last Updated: 2026-06-03 14:57:07
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -363,6 +363,9 @@ function renderNodeHTML(node, hideSources = false) {
     headerDiv.style.alignItems = "center";
     headerDiv.style.flex = "1";
     headerDiv.style.minWidth = "0";
+    headerDiv.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+    headerDiv.style.paddingRight = "12px";
+    headerDiv.style.boxSizing = "border-box";
 
     const hasChildren = Object.keys(node.children).length > 0;
 
@@ -460,12 +463,20 @@ function renderNodeHTML(node, hideSources = false) {
     const citesCol = document.createElement("div");
     citesCol.className = "node-cites-col";
     citesCol.innerText = totalCites > 0 ? totalCites : "-";
+    citesCol.style.boxSizing = "border-box";
+    citesCol.style.paddingLeft = "12px";
+    if (!hideSources) {
+        citesCol.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+        citesCol.style.paddingRight = "12px";
+    }
     rowDiv.appendChild(citesCol);
 
     if (!hideSources) {
         // Column 3: Sources (Pills / Chips)
         const sourcesCol = document.createElement("div");
         sourcesCol.className = "node-sources-col";
+        sourcesCol.style.boxSizing = "border-box";
+        sourcesCol.style.paddingLeft = "12px";
         
         if (uniqueSources.length > 0 && !hasChildren) {
             const formattedSources = uniqueSources.map(s => {
@@ -641,6 +652,9 @@ function renderCasoNodeHTML(node, isCase = false) {
     casoCol.style.overflow = "hidden";
     casoCol.style.textOverflow = "ellipsis";
     casoCol.style.whiteSpace = "nowrap";
+    casoCol.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+    casoCol.style.paddingRight = "12px";
+    casoCol.style.boxSizing = "border-box";
 
     const codeCol = document.createElement("div");
     codeCol.className = "node-code-col";
@@ -651,6 +665,10 @@ function renderCasoNodeHTML(node, isCase = false) {
     codeCol.style.overflow = "hidden";
     codeCol.style.textOverflow = "ellipsis";
     codeCol.style.whiteSpace = "nowrap";
+    codeCol.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+    codeCol.style.paddingLeft = "12px";
+    codeCol.style.paddingRight = "12px";
+    codeCol.style.boxSizing = "border-box";
 
     const citesCol = document.createElement("div");
     citesCol.className = "node-cites-col";
@@ -660,6 +678,8 @@ function renderCasoNodeHTML(node, isCase = false) {
     citesCol.style.fontSize = "13px";
     citesCol.style.fontWeight = "600";
     citesCol.style.color = "var(--sol-base00)";
+    citesCol.style.paddingLeft = "12px";
+    citesCol.style.boxSizing = "border-box";
 
     const hasChildren = Object.keys(node.children).length > 0;
     
@@ -949,18 +969,18 @@ function crearInterfazModal(rootNode, pageTitle) {
             border: none;
             border-bottom: 2px solid transparent;
             font-size: 14px;
-            font-weight: 400;
-            color: var(--sol-base1);
+            font-weight: 600;
+            color: var(--sol-base01);
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cuali-tab-btn:hover {
-            color: var(--sol-base00);
+            color: var(--sol-base02);
         }
         .cuali-tab-btn.active {
             color: var(--sol-blue);
-            border-bottom-color: var(--sol-blue);
-            font-weight: 600;
+            border-bottom: 2.5px solid var(--sol-blue);
+            font-weight: 700;
         }
         .cuali-tab-content {
             display: none;
@@ -1017,15 +1037,15 @@ function crearInterfazModal(rootNode, pageTitle) {
         .cuali-table-header {
             display: flex;
             align-items: center;
-            font-weight: 500;
-            font-size: 11px;
+            font-weight: 700;
+            font-size: 12px;
             color: var(--sol-base01);
             text-transform: uppercase;
             letter-spacing: 0.08em;
             padding: 10px 16px;
-            background-color: var(--sol-base2);
+            background-color: rgba(147, 161, 161, 0.22);
             border: 1px solid rgba(147, 161, 161, 0.15);
-            border-bottom: 2px solid rgba(147, 161, 161, 0.25);
+            border-bottom: 2.5px solid rgba(147, 161, 161, 0.35);
             border-radius: 6px 6px 0 0;
             margin-top: 4px;
         }
@@ -1346,8 +1366,8 @@ function crearInterfazModal(rootNode, pageTitle) {
     const tableHeaderExport = document.createElement("div");
     tableHeaderExport.className = "cuali-table-header";
     tableHeaderExport.innerHTML = `
-        <div class="col-header col-code">Código</div>
-        <div class="col-header col-cites">Citas</div>
+        <div class="col-header col-code" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-right: 12px; box-sizing: border-box;">Código</div>
+        <div class="col-header col-cites" style="padding-left: 12px; box-sizing: border-box;">Citas</div>
     `;
     
     const treeContainer = document.createElement("div");
@@ -1505,9 +1525,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     const tableHeaderCasos = document.createElement("div");
     tableHeaderCasos.className = "cuali-table-header";
     tableHeaderCasos.innerHTML = `
-        <div class="col-header" style="width: 200px; flex-shrink: 0;">Caso</div>
-        <div class="col-header col-code" style="flex: 1;">Código</div>
-        <div class="col-header col-cites" style="width: 100px; text-align: center; flex-shrink: 0;">Citas</div>
+        <div class="col-header" style="width: 200px; flex-shrink: 0; border-right: 1px solid rgba(147, 161, 161, 0.15); padding-right: 12px; box-sizing: border-box;">Caso</div>
+        <div class="col-header col-code" style="flex: 1; border-right: 1px solid rgba(147, 161, 161, 0.15); padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Código</div>
+        <div class="col-header col-cites" style="width: 100px; text-align: center; flex-shrink: 0; padding-left: 12px; box-sizing: border-box;">Citas</div>
     `;
 
     const listCasosContainer = document.createElement("div");
@@ -1721,9 +1741,9 @@ function crearInterfazModal(rootNode, pageTitle) {
     const tableHeaderCodebook = document.createElement("div");
     tableHeaderCodebook.className = "cuali-table-header";
     tableHeaderCodebook.innerHTML = `
-        <div class="col-header col-code">Código</div>
-        <div class="col-header col-cites">Citas</div>
-        <div class="col-header col-sources">Fuentes</div>
+        <div class="col-header col-code" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-right: 12px; box-sizing: border-box;">Código</div>
+        <div class="col-header col-cites" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Citas</div>
+        <div class="col-header col-sources" style="padding-left: 12px; box-sizing: border-box;">Fuentes</div>
     `;
 
     const listCodebookContainer = document.createElement("div");
