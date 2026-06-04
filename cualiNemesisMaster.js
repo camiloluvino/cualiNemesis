@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.6.3 - Last Updated: 2026-06-03 16:08:01
+﻿// CualiNemesis v0.7.0 - Last Updated: 2026-06-04 02:49:05
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -216,7 +216,8 @@ class TreeNode {
         this.fullName = fullName;
         this.cites = [];
         this.children = {};
-        this.checked = true;
+        this.checked = false;
+        this.isIndividuallyPivoted = false;
     }
 }
 
@@ -265,6 +266,247 @@ function construirArbolCodigos(codeMap) {
     
     return root;
 }
+
+function cloneSubtree(node) {
+    const clone = new TreeNode(node.name, node.fullName);
+    clone.checked = node.checked;
+    clone.isPivoted = node.isPivoted;
+    clone.isIndividuallyPivoted = node.isIndividuallyPivoted;
+    clone.cites = [...node.cites];
+    for (const childName in node.children) {
+        clone.children[childName] = cloneSubtree(node.children[childName]);
+    }
+    if (node.originalState) {
+        clone.originalState = cloneSubtree(node.originalState);
+    }
+    return clone;
+}
+
+function collectCitesBySource(curr, relativePath = []) {
+    const sourceMap = {};
+    
+    curr.cites.forEach(cite => {
+        const pageParts = (cite.page || "").split('/');
+        let sourceName = cite.page || "Desconocido";
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+            sourceName = pageParts[1];
+        }
+        
+        if (!sourceMap[sourceName]) {
+            sourceMap[sourceName] = {};
+        }
+        const relKey = relativePath.join('/');
+        if (!sourceMap[sourceName][relKey]) {
+            sourceMap[sourceName][relKey] = {
+                fullName: curr.fullName,
+                name: curr.name,
+                cites: []
+            };
+        }
+        sourceMap[sourceName][relKey].cites.push(cite);
+    });
+    
+    for (const childName in curr.children) {
+        const childNode = curr.children[childName];
+        const childMap = collectCitesBySource(childNode, [...relativePath, childName]);
+        
+        for (const [sourceName, relNodes] of Object.entries(childMap)) {
+            if (!sourceMap[sourceName]) {
+                sourceMap[sourceName] = {};
+            }
+            for (const [relKey, nodeInfo] of Object.entries(relNodes)) {
+                if (!sourceMap[sourceName][relKey]) {
+                    sourceMap[sourceName][relKey] = {
+                        fullName: nodeInfo.fullName,
+                        name: nodeInfo.name,
+                        cites: []
+                    };
+                }
+                sourceMap[sourceName][relKey].cites.push(...nodeInfo.cites);
+            }
+        }
+    }
+    
+    if (relativePath.length > 0) {
+        const relKey = relativePath.join('/');
+        for (const sourceName of Object.keys(sourceMap)) {
+            if (!sourceMap[sourceName][relKey]) {
+                sourceMap[sourceName][relKey] = {
+                    fullName: curr.fullName,
+                    name: curr.name,
+                    cites: []
+                };
+            }
+        }
+    }
+    
+    return sourceMap;
+}
+
+function precalcularFuentes(node) {
+    const sources = new Set();
+    node.cites.forEach(c => {
+        const pageParts = (c.page || "").split('/');
+        let sourceName = c.page || "Desconocido";
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+            sourceName = pageParts[1];
+        }
+        sources.add(sourceName);
+    });
+    for (const childName in node.children) {
+        const childNode = node.children[childName];
+        const childSources = precalcularFuentes(childNode);
+        childSources.forEach(s => sources.add(s));
+    }
+    node._sources = sources;
+    return sources;
+}
+
+function transformarNodoSmart(node) {
+    if (Object.keys(node.children).length === 0 && node.cites.length === 0) {
+        return node;
+    }
+    if (node._sources && node._sources.size <= 1) {
+        return node;
+    }
+    
+    const newChildren = {};
+    const citesBySource = {};
+    node.cites.forEach(cite => {
+        const pageParts = (cite.page || "").split('/');
+        let sourceName = cite.page || "Desconocido";
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+            sourceName = pageParts[1];
+        }
+        if (!citesBySource[sourceName]) citesBySource[sourceName] = [];
+        citesBySource[sourceName].push(cite);
+    });
+    
+    const exclusiveChildren = {};
+    const sharedChildren = [];
+    
+    for (const childName in node.children) {
+        const child = node.children[childName];
+        if (child._sources && child._sources.size === 1) {
+            const sourceName = Array.from(child._sources)[0];
+            if (!exclusiveChildren[sourceName]) {
+                exclusiveChildren[sourceName] = [];
+            }
+            exclusiveChildren[sourceName].push(child);
+        } else {
+            sharedChildren.push(child);
+        }
+    }
+    
+    const allSources = new Set([
+        ...Object.keys(exclusiveChildren),
+        ...Object.keys(citesBySource)
+    ]);
+    
+    allSources.forEach(sourceName => {
+        const sourceNode = new TreeNode(sourceName, `entrevistadx/${sourceName}`);
+        sourceNode.checked = node.checked;
+        
+        if (exclusiveChildren[sourceName]) {
+            exclusiveChildren[sourceName].forEach(child => {
+                sourceNode.children[child.name] = child;
+            });
+        }
+        if (citesBySource[sourceName]) {
+            sourceNode.cites.push(...citesBySource[sourceName]);
+        }
+        newChildren[sourceName] = sourceNode;
+    });
+    
+    sharedChildren.forEach(child => {
+        const transformed = transformarNodoSmart(child);
+        newChildren[child.name] = transformed;
+    });
+    
+    node.cites = [];
+    node.children = newChildren;
+    return node;
+}
+
+function pivotNode(node, noDuplicar) {
+    if (noDuplicar) {
+        precalcularFuentes(node);
+        transformarNodoSmart(node);
+    } else {
+        const sourceMap = collectCitesBySource(node, []);
+        const newChildren = {};
+        
+        for (const sourceName in sourceMap) {
+            const sourceNode = new TreeNode(sourceName, `entrevistadx/${sourceName}`);
+            sourceNode.checked = node.checked;
+            
+            if (sourceMap[sourceName][""]) {
+                sourceNode.cites.push(...sourceMap[sourceName][""].cites);
+            }
+            
+            for (const [relKey, nodeInfo] of Object.entries(sourceMap[sourceName])) {
+                if (relKey === "") continue;
+                const parts = relKey.split('/');
+                let current = sourceNode;
+                
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    if (!current.children[part]) {
+                        const intermediateKey = parts.slice(0, i + 1).join('/');
+                        const intermediateInfo = sourceMap[sourceName][intermediateKey];
+                        current.children[part] = new TreeNode(part, intermediateInfo ? intermediateInfo.fullName : "");
+                        
+                        const partPath = parts.slice(0, i + 1);
+                        if (node.originalState) {
+                            current.children[part].checked = findOriginalCheckedState(node.originalState.children, partPath);
+                        } else {
+                            current.children[part].checked = false;
+                        }
+                    }
+                    current = current.children[part];
+                    
+                    if (i === parts.length - 1) {
+                        current.cites.push(...nodeInfo.cites);
+                        if (node.originalState) {
+                            current.checked = findOriginalCheckedState(node.originalState.children, parts);
+                        } else {
+                            current.checked = false;
+                        }
+                    }
+                }
+            }
+            newChildren[sourceName] = sourceNode;
+        }
+        node.cites = [];
+        node.children = newChildren;
+    }
+}
+
+function findOriginalCheckedState(originalChildren, parts) {
+    let current = { children: originalChildren };
+    for (const part of parts) {
+        if (current.children && current.children[part]) {
+            current = current.children[part];
+        } else {
+            return false;
+        }
+    }
+    return current.checked;
+}
+
+function pivotAtDepth(node, targetDepth, currentDepth = 0, noDuplicar = false) {
+    if (!node) return;
+    if (currentDepth === targetDepth) {
+        pivotNode(node, noDuplicar);
+        return;
+    }
+    for (const childName in node.children) {
+        pivotAtDepth(node.children[childName], targetDepth, currentDepth + 1, noDuplicar);
+    }
+}
+
+
+
 
 
 // File: ui/modal.js
@@ -368,11 +610,12 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
     headerDiv.style.boxSizing = "border-box";
 
     const hasChildren = Object.keys(node.children).length > 0;
+    let toggleIcon = null;
 
     if (hasChildren) {
-        const toggleIcon = document.createElement("span");
+        toggleIcon = document.createElement("span");
         toggleIcon.className = "tree-toggle";
-        toggleIcon.innerText = "▼ ";
+        toggleIcon.innerText = node.isIndividuallyPivoted ? "▼ " : "▶ ";
         toggleIcon.style.cursor = "pointer";
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
@@ -423,28 +666,71 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
-    labelSpan.innerText = node.name;
+    if (node.isIndividuallyPivoted) {
+        labelSpan.innerText = "🗂️ " + node.name;
+        labelSpan.style.color = "var(--sol-blue)";
+    } else {
+        labelSpan.innerText = node.name;
+    }
     labelSpan.style.cursor = "pointer";
     labelSpan.style.textOverflow = "ellipsis";
     labelSpan.style.overflow = "hidden";
     labelSpan.style.whiteSpace = "nowrap";
+    
     if (depth === 0) {
         labelSpan.style.fontWeight = "600";
         labelSpan.style.fontSize = "14px";
-        labelSpan.style.color = "var(--sol-base01)";
+        if (!node.isIndividuallyPivoted) {
+            labelSpan.style.color = "var(--sol-base01)";
+        }
         rowDiv.classList.add("node-depth-0");
     } else if (depth === 1) {
         labelSpan.style.fontWeight = "500";
         labelSpan.style.fontSize = "14px";
-        labelSpan.style.color = "var(--sol-base01)";
+        if (!node.isIndividuallyPivoted) {
+            labelSpan.style.color = "var(--sol-base01)";
+        }
     } else {
         labelSpan.style.fontWeight = "400";
         labelSpan.style.fontSize = "13px";
-        labelSpan.style.color = "var(--sol-base1)";
+        if (!node.isIndividuallyPivoted) {
+            labelSpan.style.color = "var(--sol-base1)";
+        }
     }
+    
     labelSpan.onclick = () => {
         checkbox.click();
     };
+
+    if (!hideSources) {
+        labelSpan.oncontextmenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!node.isIndividuallyPivoted) {
+                node.originalState = cloneSubtree(node);
+                pivotNode(node, noDuplicarCompartidos);
+                node.isIndividuallyPivoted = true;
+            } else {
+                if (node.originalState) {
+                    node.children = {};
+                    for (const childName in node.originalState.children) {
+                        node.children[childName] = cloneSubtree(node.originalState.children[childName]);
+                    }
+                    node.cites = [...node.originalState.cites];
+                    node.isIndividuallyPivoted = false;
+                    node.originalState = null;
+                }
+            }
+            
+            const nuevoLi = renderNodeHTML(node, hideSources, depth);
+            if (li.parentNode) {
+                li.parentNode.replaceChild(nuevoLi, li);
+            }
+        };
+        labelSpan.title = "Clic derecho para agrupar por fuentes este código";
+    }
+    
     headerDiv.appendChild(labelSpan);
 
     const goBtn = document.createElement("button");
@@ -465,6 +751,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
         abrirPaginaPorTitulo(node.fullName);
     };
     headerDiv.appendChild(goBtn);
+
     rowDiv.appendChild(headerDiv);
 
     // Calculate aggregated quotes and unique sources
@@ -535,6 +822,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
+        ul.style.display = node.isIndividuallyPivoted ? "block" : "none";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
@@ -563,7 +851,7 @@ function renderCodebookNodeHTML(node) {
     if (hasChildren) {
         const toggleIcon = document.createElement("span");
         toggleIcon.className = "tree-toggle";
-        toggleIcon.innerText = "▼ ";
+        toggleIcon.innerText = "▶ ";
         toggleIcon.style.cursor = "pointer";
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
@@ -629,6 +917,7 @@ function renderCodebookNodeHTML(node) {
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
+        ul.style.display = "none";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
@@ -699,7 +988,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     if (hasChildren) {
         toggleIcon = document.createElement("span");
         toggleIcon.className = "tree-toggle";
-        toggleIcon.innerText = "▼ ";
+        toggleIcon.innerText = "▶ ";
         toggleIcon.style.cursor = "pointer";
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
@@ -820,6 +1109,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
+        ul.style.display = "none";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
@@ -952,6 +1242,10 @@ function seleccionarNodosFiltrados(container, query, rootNodeObj) {
 function crearInterfazModal(rootNode, pageTitle) {
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
+    let arbolPivotado = false;
+    let noDuplicarCompartidos = false;
+    let smartGroupingContainer = null;
+
     let existingStyles = document.getElementById("cuali-nemesis-styles");
     if (existingStyles) {
         existingStyles.remove();
@@ -1295,6 +1589,39 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
         .node-depth-0 {
             background-color: rgba(242, 241, 237, 0.4);
+        }
+
+        /* Toggle Button Styles */
+        .cuali-view-toggle {
+            display: inline-flex;
+            border: 1px solid rgba(147, 161, 161, 0.25);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-left: 12px;
+            background-color: var(--sol-base3);
+        }
+        .cuali-view-toggle-btn {
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+            color: var(--sol-base1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .cuali-view-toggle-btn.active {
+            background: rgba(38, 139, 210, 0.1);
+            color: var(--sol-blue);
+            font-weight: 600;
+        }
+        .cuali-view-toggle-btn:hover:not(.active) {
+            background: rgba(147, 161, 161, 0.06);
+            color: var(--sol-base01);
         }
     `;
     document.head.appendChild(styleTag);
@@ -1820,6 +2147,140 @@ function crearInterfazModal(rootNode, pageTitle) {
     toolbarCodebookLeft.appendChild(btnCodebookSelectAll);
     toolbarCodebookLeft.appendChild(btnCodebookDeselectAll);
     toolbarCodebookLeft.appendChild(btnCodebookSelectFiltered);
+
+    smartGroupingContainer = document.createElement("label");
+    smartGroupingContainer.style.display = "flex";
+    smartGroupingContainer.style.alignItems = "center";
+    smartGroupingContainer.style.gap = "4px";
+    smartGroupingContainer.style.fontSize = "12px";
+    smartGroupingContainer.style.cursor = "pointer";
+    smartGroupingContainer.style.marginLeft = "12px";
+    smartGroupingContainer.style.color = "var(--sol-base1)";
+    smartGroupingContainer.title = "No duplicar códigos compartidos por múltiples fuentes (mantenerlos al nivel del padre)";
+
+    const chkSmartGrouping = document.createElement("input");
+    chkSmartGrouping.type = "checkbox";
+    chkSmartGrouping.id = "cuali-smart-grouping";
+    chkSmartGrouping.style.cursor = "pointer";
+    chkSmartGrouping.onchange = () => {
+        noDuplicarCompartidos = chkSmartGrouping.checked;
+        if (arbolPivotado && codebookTreeRoot && codebookTreeRoot.originalState) {
+            codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
+            const levelVal = selectPivotLevel.value;
+            if (levelVal === "auto") {
+                for (const childName in codebookTreeRoot.children) {
+                    const child = codebookTreeRoot.children[childName];
+                    child.originalState = codebookTreeRoot.originalState.children[childName];
+                    pivotNode(child, true);
+                }
+            } else {
+                const depth = parseInt(levelVal, 10);
+                pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+            }
+            renderTabCodebook(false);
+        }
+    };
+    
+    smartGroupingContainer.appendChild(chkSmartGrouping);
+    smartGroupingContainer.appendChild(document.createTextNode("No duplicar códigos compartidos"));
+    toolbarCodebookLeft.appendChild(smartGroupingContainer);
+
+    // Selector de nivel de pivote (Profundidad)
+    const lblPivotLevel = document.createElement("span");
+    lblPivotLevel.innerText = "Nivel:";
+    lblPivotLevel.style.marginLeft = "12px";
+    lblPivotLevel.style.fontSize = "12px";
+    lblPivotLevel.style.color = "var(--sol-base1)";
+
+    const selectPivotLevel = document.createElement("select");
+    selectPivotLevel.id = "cuali-pivot-level";
+    selectPivotLevel.style.marginLeft = "6px";
+    selectPivotLevel.style.padding = "2px 6px";
+    selectPivotLevel.style.borderRadius = "4px";
+    selectPivotLevel.style.border = "1px solid var(--sol-base2)";
+    selectPivotLevel.style.backgroundColor = "var(--sol-base3)";
+    selectPivotLevel.style.color = "var(--sol-base00)";
+    selectPivotLevel.style.fontSize = "12px";
+    selectPivotLevel.style.cursor = "pointer";
+    
+    const options = [
+        { value: "1", text: "Nivel 1" },
+        { value: "2", text: "Nivel 2" },
+        { value: "3", text: "Nivel 3" },
+        { value: "4", text: "Nivel 4" },
+        { value: "auto", text: "Automático (Todos)" }
+    ];
+    
+    options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.text = opt.text;
+        selectPivotLevel.appendChild(option);
+    });
+
+    selectPivotLevel.onchange = () => {
+        if (arbolPivotado && codebookTreeRoot && codebookTreeRoot.originalState) {
+            codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
+            const levelVal = selectPivotLevel.value;
+            if (levelVal === "auto") {
+                for (const childName in codebookTreeRoot.children) {
+                    const child = codebookTreeRoot.children[childName];
+                    child.originalState = codebookTreeRoot.originalState.children[childName];
+                    pivotNode(child, true);
+                }
+            } else {
+                const depth = parseInt(levelVal, 10);
+                pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+            }
+            renderTabCodebook(false);
+        }
+    };
+
+    // Botón para agrupar globalmente por fuentes (Pivote Global)
+    const btnPivotGlobal = document.createElement("button");
+    btnPivotGlobal.className = "cuali-btn-tool";
+    btnPivotGlobal.style.marginLeft = "12px";
+    btnPivotGlobal.style.fontWeight = "500";
+    btnPivotGlobal.innerHTML = "🗂️ Agrupar árbol por fuentes";
+    btnPivotGlobal.title = "Agrupar todo el árbol de códigos bajo sus respectivas fuentes";
+    btnPivotGlobal.onclick = (e) => {
+        e.preventDefault();
+        arbolPivotado = !arbolPivotado;
+        if (arbolPivotado) {
+            btnPivotGlobal.innerHTML = "📋 Restaurar estructura original";
+            btnPivotGlobal.style.backgroundColor = "var(--sol-blue)";
+            btnPivotGlobal.style.color = "white";
+            
+            if (codebookTreeRoot) {
+                codebookTreeRoot.originalState = cloneSubtree(codebookTreeRoot);
+                const levelVal = selectPivotLevel.value;
+                if (levelVal === "auto") {
+                    for (const childName in codebookTreeRoot.children) {
+                        const child = codebookTreeRoot.children[childName];
+                        child.originalState = codebookTreeRoot.originalState.children[childName];
+                        pivotNode(child, true);
+                    }
+                } else {
+                    const depth = parseInt(levelVal, 10);
+                    pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+                }
+            }
+            renderTabCodebook(false);
+        } else {
+            btnPivotGlobal.innerHTML = "🗂️ Agrupar árbol por fuentes";
+            btnPivotGlobal.style.backgroundColor = "";
+            btnPivotGlobal.style.color = "";
+            
+            if (codebookTreeRoot && codebookTreeRoot.originalState) {
+                codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
+            }
+            renderTabCodebook(false);
+        }
+    };
+    toolbarCodebookLeft.appendChild(btnPivotGlobal);
+    toolbarCodebookLeft.appendChild(lblPivotLevel);
+    toolbarCodebookLeft.appendChild(selectPivotLevel);
+
     toolbarCodebook.appendChild(toolbarCodebookLeft);
     
     const btnRefreshCodebook = document.createElement("button");
@@ -1898,21 +2359,44 @@ function crearInterfazModal(rootNode, pageTitle) {
     codebookButtons.appendChild(btnCodebookPage);
     tabCodebook.appendChild(codebookButtons);
 
-    function renderTabCodebook() {
+    function renderTabCodebook(rebuild = true) {
         listCodebookContainer.innerHTML = "";
-        const cb = obtenerCodebookGlobal();
         
-        // Build global tree with references
-        const todosLosTitulos = [];
-        ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
-            todosLosTitulos.push(...cb[key]);
-        });
-        const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
-        codebookTreeRoot = construirArbolCodigos(codeMapGlobal);
+        if (rebuild || !codebookTreeRoot) {
+            const cb = obtenerCodebookGlobal();
+            const todosLosTitulos = [];
+            ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
+                todosLosTitulos.push(...cb[key]);
+            });
+            const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
+            
+            codebookTreeRoot = construirArbolCodigos(codeMapGlobal);
+            
+            if (arbolPivotado) {
+                codebookTreeRoot.originalState = cloneSubtree(codebookTreeRoot);
+                const levelVal = selectPivotLevel.value;
+                if (levelVal === "auto") {
+                    for (const childName in codebookTreeRoot.children) {
+                        const child = codebookTreeRoot.children[childName];
+                        child.originalState = codebookTreeRoot.originalState.children[childName];
+                        pivotNode(child, true);
+                    }
+                } else {
+                    const depth = parseInt(levelVal, 10);
+                    pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+                }
+            }
+        }
         
         const rootUl = document.createElement("ul");
         rootUl.style.paddingLeft = "0";
         rootUl.style.margin = "0";
+
+        tableHeaderCodebook.innerHTML = `
+            <div class="col-header col-code" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-right: 12px; box-sizing: border-box;">Código</div>
+            <div class="col-header col-cites" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Citas</div>
+            <div class="col-header col-sources" style="padding-left: 12px; box-sizing: border-box;">Fuentes</div>
+        `;
         
         if (codebookTreeRoot && Object.keys(codebookTreeRoot.children).length > 0) {
             const childNamesSorted = Object.keys(codebookTreeRoot.children).sort();

@@ -34,6 +34,9 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 ### 3. 🗺️ Codificación (Codebook Global)
 * Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`), Códigos (`cod/`) y Memos (`memo/`).
 * Renderiza el Codebook global en una estructura de tabla de árbol (TreeTable) interactiva con checkboxes en cascada y tres columnas: **Código**, **Citas** (cantidad total de citas asociadas) y **Fuentes** (entrevistados vinculados).
+* **Pivote Híbrido por Fuentes (v0.7.0):**
+  * **Selector de Nivel Global:** Permite agrupar el árbol cualitativo completo por fuentes a una profundidad específica (`Nivel 1`, `Nivel 2`, `Nivel 3`, `Nivel 4`) o de forma inteligente recursiva (`Automático`).
+  * **Pivote Contextual por Nodo (Clic Derecho):** Permite hacer clic derecho sobre la etiqueta de cualquier código para pivotar o despivotar individualmente ese código y sus descendientes. El código pivotado cambia de color a azul y se le añade el prefijo `🗂️` con despliegue automático del subárbol.
 * **Filtrado y Visualización de Fuentes:**
   * **Conteo empírico estricto:** Solo se contabilizan y muestran citas provenientes de páginas con formato `entrevistadx/[Nombre]/transcripción/a analizar`, ignorando páginas de referencia manual o codificación.
   * **Formato limpio:** Se extrae solo el nombre del entrevistado en formato de etiqueta compacta (chip visual).

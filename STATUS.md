@@ -1,8 +1,9 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Rediseño Estético, Usabilidad y Compactación (V 0.6.3)
+## Fase Actual: Pivote Híbrido y Flexibilidad por Fuente (V 0.7.0)
 
 ### Completado
+- [x] **Pivote Híbrido por Fuentes (v0.7.0):** Implementada la Opción D para pivotar el árbol de códigos por fuente. Incluye un selector global de profundidad (Niveles 1-4 y Automático) en la barra de herramientas y la capacidad de pivotar/despivotar códigos individuales haciendo clic derecho contextualmente con redibujado local en caliente y estilos visuales diferenciados.
 - [x] **Selección Transversal por Búsqueda (v0.6.4):** Añadido el botón `🔍 Seleccionar filtrados` en las tres pestañas del panel analítico. Permite seleccionar de forma transversal todos los códigos/casos que coincidan con la cadena del buscador.
 - [x] **Auto-selección en Exportación (v0.6.4):** Integrada la selección transversal inteligente directamente en los botones de exportación (Copiar al portapapeles y Crear nueva página). Si el buscador de la pestaña tiene texto, se pre-seleccionan de forma automática los nodos coincidentes antes de exportar, manteniendo la jerarquía estructurada.
 - [x] **Compactación de Elementos de Interfaz (v0.6.3):** Reducción de márgenes y paddings en el modal general, encabezados, pestañas, buscador y toolbar para maximizar el área de trabajo y permitir una visualización panorámica óptima.

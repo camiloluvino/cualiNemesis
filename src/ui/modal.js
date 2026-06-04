@@ -98,11 +98,12 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
     headerDiv.style.boxSizing = "border-box";
 
     const hasChildren = Object.keys(node.children).length > 0;
+    let toggleIcon = null;
 
     if (hasChildren) {
-        const toggleIcon = document.createElement("span");
+        toggleIcon = document.createElement("span");
         toggleIcon.className = "tree-toggle";
-        toggleIcon.innerText = "▼ ";
+        toggleIcon.innerText = node.isIndividuallyPivoted ? "▼ " : "▶ ";
         toggleIcon.style.cursor = "pointer";
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
@@ -153,28 +154,71 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "node-label";
-    labelSpan.innerText = node.name;
+    if (node.isIndividuallyPivoted) {
+        labelSpan.innerText = "🗂️ " + node.name;
+        labelSpan.style.color = "var(--sol-blue)";
+    } else {
+        labelSpan.innerText = node.name;
+    }
     labelSpan.style.cursor = "pointer";
     labelSpan.style.textOverflow = "ellipsis";
     labelSpan.style.overflow = "hidden";
     labelSpan.style.whiteSpace = "nowrap";
+    
     if (depth === 0) {
         labelSpan.style.fontWeight = "600";
         labelSpan.style.fontSize = "14px";
-        labelSpan.style.color = "var(--sol-base01)";
+        if (!node.isIndividuallyPivoted) {
+            labelSpan.style.color = "var(--sol-base01)";
+        }
         rowDiv.classList.add("node-depth-0");
     } else if (depth === 1) {
         labelSpan.style.fontWeight = "500";
         labelSpan.style.fontSize = "14px";
-        labelSpan.style.color = "var(--sol-base01)";
+        if (!node.isIndividuallyPivoted) {
+            labelSpan.style.color = "var(--sol-base01)";
+        }
     } else {
         labelSpan.style.fontWeight = "400";
         labelSpan.style.fontSize = "13px";
-        labelSpan.style.color = "var(--sol-base1)";
+        if (!node.isIndividuallyPivoted) {
+            labelSpan.style.color = "var(--sol-base1)";
+        }
     }
+    
     labelSpan.onclick = () => {
         checkbox.click();
     };
+
+    if (!hideSources) {
+        labelSpan.oncontextmenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!node.isIndividuallyPivoted) {
+                node.originalState = cloneSubtree(node);
+                pivotNode(node, noDuplicarCompartidos);
+                node.isIndividuallyPivoted = true;
+            } else {
+                if (node.originalState) {
+                    node.children = {};
+                    for (const childName in node.originalState.children) {
+                        node.children[childName] = cloneSubtree(node.originalState.children[childName]);
+                    }
+                    node.cites = [...node.originalState.cites];
+                    node.isIndividuallyPivoted = false;
+                    node.originalState = null;
+                }
+            }
+            
+            const nuevoLi = renderNodeHTML(node, hideSources, depth);
+            if (li.parentNode) {
+                li.parentNode.replaceChild(nuevoLi, li);
+            }
+        };
+        labelSpan.title = "Clic derecho para agrupar por fuentes este código";
+    }
+    
     headerDiv.appendChild(labelSpan);
 
     const goBtn = document.createElement("button");
@@ -195,6 +239,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
         abrirPaginaPorTitulo(node.fullName);
     };
     headerDiv.appendChild(goBtn);
+
     rowDiv.appendChild(headerDiv);
 
     // Calculate aggregated quotes and unique sources
@@ -265,6 +310,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
+        ul.style.display = node.isIndividuallyPivoted ? "block" : "none";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
@@ -293,7 +339,7 @@ function renderCodebookNodeHTML(node) {
     if (hasChildren) {
         const toggleIcon = document.createElement("span");
         toggleIcon.className = "tree-toggle";
-        toggleIcon.innerText = "▼ ";
+        toggleIcon.innerText = "▶ ";
         toggleIcon.style.cursor = "pointer";
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
@@ -359,6 +405,7 @@ function renderCodebookNodeHTML(node) {
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
+        ul.style.display = "none";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
@@ -429,7 +476,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     if (hasChildren) {
         toggleIcon = document.createElement("span");
         toggleIcon.className = "tree-toggle";
-        toggleIcon.innerText = "▼ ";
+        toggleIcon.innerText = "▶ ";
         toggleIcon.style.cursor = "pointer";
         toggleIcon.style.marginRight = "4px";
         toggleIcon.style.fontFamily = "monospace";
@@ -550,6 +597,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
         ul.style.marginLeft = "6px";
         ul.style.marginTop = "2px";
         ul.style.marginBottom = "2px";
+        ul.style.display = "none";
         
         const childNamesSorted = Object.keys(node.children).sort();
         childNamesSorted.forEach(childName => {
@@ -682,6 +730,10 @@ function seleccionarNodosFiltrados(container, query, rootNodeObj) {
 function crearInterfazModal(rootNode, pageTitle) {
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
+    let arbolPivotado = false;
+    let noDuplicarCompartidos = false;
+    let smartGroupingContainer = null;
+
     let existingStyles = document.getElementById("cuali-nemesis-styles");
     if (existingStyles) {
         existingStyles.remove();
@@ -1025,6 +1077,39 @@ function crearInterfazModal(rootNode, pageTitle) {
         }
         .node-depth-0 {
             background-color: rgba(242, 241, 237, 0.4);
+        }
+
+        /* Toggle Button Styles */
+        .cuali-view-toggle {
+            display: inline-flex;
+            border: 1px solid rgba(147, 161, 161, 0.25);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-left: 12px;
+            background-color: var(--sol-base3);
+        }
+        .cuali-view-toggle-btn {
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+            color: var(--sol-base1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .cuali-view-toggle-btn.active {
+            background: rgba(38, 139, 210, 0.1);
+            color: var(--sol-blue);
+            font-weight: 600;
+        }
+        .cuali-view-toggle-btn:hover:not(.active) {
+            background: rgba(147, 161, 161, 0.06);
+            color: var(--sol-base01);
         }
     `;
     document.head.appendChild(styleTag);
@@ -1550,6 +1635,140 @@ function crearInterfazModal(rootNode, pageTitle) {
     toolbarCodebookLeft.appendChild(btnCodebookSelectAll);
     toolbarCodebookLeft.appendChild(btnCodebookDeselectAll);
     toolbarCodebookLeft.appendChild(btnCodebookSelectFiltered);
+
+    smartGroupingContainer = document.createElement("label");
+    smartGroupingContainer.style.display = "flex";
+    smartGroupingContainer.style.alignItems = "center";
+    smartGroupingContainer.style.gap = "4px";
+    smartGroupingContainer.style.fontSize = "12px";
+    smartGroupingContainer.style.cursor = "pointer";
+    smartGroupingContainer.style.marginLeft = "12px";
+    smartGroupingContainer.style.color = "var(--sol-base1)";
+    smartGroupingContainer.title = "No duplicar códigos compartidos por múltiples fuentes (mantenerlos al nivel del padre)";
+
+    const chkSmartGrouping = document.createElement("input");
+    chkSmartGrouping.type = "checkbox";
+    chkSmartGrouping.id = "cuali-smart-grouping";
+    chkSmartGrouping.style.cursor = "pointer";
+    chkSmartGrouping.onchange = () => {
+        noDuplicarCompartidos = chkSmartGrouping.checked;
+        if (arbolPivotado && codebookTreeRoot && codebookTreeRoot.originalState) {
+            codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
+            const levelVal = selectPivotLevel.value;
+            if (levelVal === "auto") {
+                for (const childName in codebookTreeRoot.children) {
+                    const child = codebookTreeRoot.children[childName];
+                    child.originalState = codebookTreeRoot.originalState.children[childName];
+                    pivotNode(child, true);
+                }
+            } else {
+                const depth = parseInt(levelVal, 10);
+                pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+            }
+            renderTabCodebook(false);
+        }
+    };
+    
+    smartGroupingContainer.appendChild(chkSmartGrouping);
+    smartGroupingContainer.appendChild(document.createTextNode("No duplicar códigos compartidos"));
+    toolbarCodebookLeft.appendChild(smartGroupingContainer);
+
+    // Selector de nivel de pivote (Profundidad)
+    const lblPivotLevel = document.createElement("span");
+    lblPivotLevel.innerText = "Nivel:";
+    lblPivotLevel.style.marginLeft = "12px";
+    lblPivotLevel.style.fontSize = "12px";
+    lblPivotLevel.style.color = "var(--sol-base1)";
+
+    const selectPivotLevel = document.createElement("select");
+    selectPivotLevel.id = "cuali-pivot-level";
+    selectPivotLevel.style.marginLeft = "6px";
+    selectPivotLevel.style.padding = "2px 6px";
+    selectPivotLevel.style.borderRadius = "4px";
+    selectPivotLevel.style.border = "1px solid var(--sol-base2)";
+    selectPivotLevel.style.backgroundColor = "var(--sol-base3)";
+    selectPivotLevel.style.color = "var(--sol-base00)";
+    selectPivotLevel.style.fontSize = "12px";
+    selectPivotLevel.style.cursor = "pointer";
+    
+    const options = [
+        { value: "1", text: "Nivel 1" },
+        { value: "2", text: "Nivel 2" },
+        { value: "3", text: "Nivel 3" },
+        { value: "4", text: "Nivel 4" },
+        { value: "auto", text: "Automático (Todos)" }
+    ];
+    
+    options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.text = opt.text;
+        selectPivotLevel.appendChild(option);
+    });
+
+    selectPivotLevel.onchange = () => {
+        if (arbolPivotado && codebookTreeRoot && codebookTreeRoot.originalState) {
+            codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
+            const levelVal = selectPivotLevel.value;
+            if (levelVal === "auto") {
+                for (const childName in codebookTreeRoot.children) {
+                    const child = codebookTreeRoot.children[childName];
+                    child.originalState = codebookTreeRoot.originalState.children[childName];
+                    pivotNode(child, true);
+                }
+            } else {
+                const depth = parseInt(levelVal, 10);
+                pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+            }
+            renderTabCodebook(false);
+        }
+    };
+
+    // Botón para agrupar globalmente por fuentes (Pivote Global)
+    const btnPivotGlobal = document.createElement("button");
+    btnPivotGlobal.className = "cuali-btn-tool";
+    btnPivotGlobal.style.marginLeft = "12px";
+    btnPivotGlobal.style.fontWeight = "500";
+    btnPivotGlobal.innerHTML = "🗂️ Agrupar árbol por fuentes";
+    btnPivotGlobal.title = "Agrupar todo el árbol de códigos bajo sus respectivas fuentes";
+    btnPivotGlobal.onclick = (e) => {
+        e.preventDefault();
+        arbolPivotado = !arbolPivotado;
+        if (arbolPivotado) {
+            btnPivotGlobal.innerHTML = "📋 Restaurar estructura original";
+            btnPivotGlobal.style.backgroundColor = "var(--sol-blue)";
+            btnPivotGlobal.style.color = "white";
+            
+            if (codebookTreeRoot) {
+                codebookTreeRoot.originalState = cloneSubtree(codebookTreeRoot);
+                const levelVal = selectPivotLevel.value;
+                if (levelVal === "auto") {
+                    for (const childName in codebookTreeRoot.children) {
+                        const child = codebookTreeRoot.children[childName];
+                        child.originalState = codebookTreeRoot.originalState.children[childName];
+                        pivotNode(child, true);
+                    }
+                } else {
+                    const depth = parseInt(levelVal, 10);
+                    pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+                }
+            }
+            renderTabCodebook(false);
+        } else {
+            btnPivotGlobal.innerHTML = "🗂️ Agrupar árbol por fuentes";
+            btnPivotGlobal.style.backgroundColor = "";
+            btnPivotGlobal.style.color = "";
+            
+            if (codebookTreeRoot && codebookTreeRoot.originalState) {
+                codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
+            }
+            renderTabCodebook(false);
+        }
+    };
+    toolbarCodebookLeft.appendChild(btnPivotGlobal);
+    toolbarCodebookLeft.appendChild(lblPivotLevel);
+    toolbarCodebookLeft.appendChild(selectPivotLevel);
+
     toolbarCodebook.appendChild(toolbarCodebookLeft);
     
     const btnRefreshCodebook = document.createElement("button");
@@ -1628,21 +1847,44 @@ function crearInterfazModal(rootNode, pageTitle) {
     codebookButtons.appendChild(btnCodebookPage);
     tabCodebook.appendChild(codebookButtons);
 
-    function renderTabCodebook() {
+    function renderTabCodebook(rebuild = true) {
         listCodebookContainer.innerHTML = "";
-        const cb = obtenerCodebookGlobal();
         
-        // Build global tree with references
-        const todosLosTitulos = [];
-        ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
-            todosLosTitulos.push(...cb[key]);
-        });
-        const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
-        codebookTreeRoot = construirArbolCodigos(codeMapGlobal);
+        if (rebuild || !codebookTreeRoot) {
+            const cb = obtenerCodebookGlobal();
+            const todosLosTitulos = [];
+            ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
+                todosLosTitulos.push(...cb[key]);
+            });
+            const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
+            
+            codebookTreeRoot = construirArbolCodigos(codeMapGlobal);
+            
+            if (arbolPivotado) {
+                codebookTreeRoot.originalState = cloneSubtree(codebookTreeRoot);
+                const levelVal = selectPivotLevel.value;
+                if (levelVal === "auto") {
+                    for (const childName in codebookTreeRoot.children) {
+                        const child = codebookTreeRoot.children[childName];
+                        child.originalState = codebookTreeRoot.originalState.children[childName];
+                        pivotNode(child, true);
+                    }
+                } else {
+                    const depth = parseInt(levelVal, 10);
+                    pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
+                }
+            }
+        }
         
         const rootUl = document.createElement("ul");
         rootUl.style.paddingLeft = "0";
         rootUl.style.margin = "0";
+
+        tableHeaderCodebook.innerHTML = `
+            <div class="col-header col-code" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-right: 12px; box-sizing: border-box;">Código</div>
+            <div class="col-header col-cites" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Citas</div>
+            <div class="col-header col-sources" style="padding-left: 12px; box-sizing: border-box;">Fuentes</div>
+        `;
         
         if (codebookTreeRoot && Object.keys(codebookTreeRoot.children).length > 0) {
             const childNamesSorted = Object.keys(codebookTreeRoot.children).sort();
