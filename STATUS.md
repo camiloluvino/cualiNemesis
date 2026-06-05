@@ -1,8 +1,10 @@
 # Estado del Proyecto (STATUS)
 
-## Fase Actual: Pivote Híbrido y Flexibilidad por Fuente (V 0.7.0)
+## Fase Actual: Notas Informativas y Gestión de Eliminación de Categorías (V 0.8.0)
 
 ### Completado
+- [x] **Gestión y Eliminación de Categorías (v0.8.0):** Implementado el botón `🗑️ Gestionar seleccionados` en las tres pestañas. Añadido un modal de confirmación con impacto detallado. Soporta dos modos: "Desenlazar" (quitar corchetes `[[  ]]`) y "Eliminar" (reemplazar por el enlace auditable `[[CÓDIGO ELIMINADO]]` para preservar la integridad de la entrevista y rastrear eliminaciones vía backlinks). Opcionalmente borra las páginas correspondientes en Roam. Ejecución secuencial espaciada para rate limiting con barra de progreso.
+- [x] **Notas de Origen de Datos (v0.8.0):** Agregada una nota descriptiva sutil `.cn-info-note` debajo de la barra de herramientas de cada pestaña detallando la procedencia exacta de la información y criterios de filtrado.
 - [x] **Pivote Híbrido por Fuentes (v0.7.0):** Implementada la Opción D para pivotar el árbol de códigos por fuente. Incluye un selector global de profundidad (Niveles 1-4 y Automático) en la barra de herramientas y la capacidad de pivotar/despivotar códigos individuales haciendo clic derecho contextualmente con redibujado local en caliente y estilos visuales diferenciados.
 - [x] **Selección Transversal por Búsqueda (v0.6.4):** Añadido el botón `🔍 Seleccionar filtrados` en las tres pestañas del panel analítico. Permite seleccionar de forma transversal todos los códigos/casos que coincidan con la cadena del buscador.
 - [x] **Auto-selección en Exportación (v0.6.4):** Integrada la selección transversal inteligente directamente en los botones de exportación (Copiar al portapapeles y Crear nueva página). Si el buscador de la pestaña tiene texto, se pre-seleccionan de forma automática los nodos coincidentes antes de exportar, manteniendo la jerarquía estructurada.

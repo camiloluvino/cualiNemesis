@@ -60,6 +60,308 @@ function getAggregateCites(node) {
     return count;
 }
 
+function recolectarNodosChecked(node, list = []) {
+    if (node) {
+        if (node.checked && node.fullName) {
+            list.push(node);
+        }
+        if (node.children) {
+            for (const childName in node.children) {
+                recolectarNodosChecked(node.children[childName], list);
+            }
+        }
+    }
+    return list;
+}
+
+function mostrarModalGestion(nodos, scope, onComplete) {
+    if (nodos.length === 0) {
+        mostrarNotificacion("No has seleccionado ninguna categoría para gestionar.");
+        return;
+    }
+
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    // 1. Calculate total citations (cites) and unique sources (page title or interviewee name) affected
+    let totalCitas = 0;
+    const sourcesSet = new Set();
+    const uniqueCodes = new Set();
+
+    nodos.forEach(node => {
+        if (node.cites) {
+            totalCitas += node.cites.length;
+            node.cites.forEach(c => {
+                if (c.page) {
+                    sourcesSet.add(c.page);
+                }
+            });
+        }
+        if (node.fullName) {
+            uniqueCodes.add(node.fullName);
+        }
+    });
+
+    // Create a new modal overlay specifically for this management action
+    const mOverlay = document.createElement("div");
+    mOverlay.style.position = "fixed";
+    mOverlay.style.top = "0"; mOverlay.style.left = "0";
+    mOverlay.style.width = "100%"; mOverlay.style.height = "100%";
+    mOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
+    mOverlay.style.zIndex = "10001";
+    mOverlay.style.display = "flex";
+    mOverlay.style.justifyContent = "center";
+    mOverlay.style.alignItems = "center";
+
+    const mContainer = document.createElement("div");
+    mContainer.className = "cn-gestion-modal";
+
+    const titleEl = document.createElement("h4");
+    titleEl.className = "cn-gestion-title";
+    titleEl.innerHTML = "⚠️ Gestión de Categorías Seleccionadas";
+    mContainer.appendChild(titleEl);
+
+    const descEl = document.createElement("div");
+    descEl.style.fontSize = "13px";
+    descEl.style.lineHeight = "1.5";
+    descEl.innerHTML = `Has seleccionado <strong>${uniqueCodes.size}</strong> categorías con un total de <strong>${totalCitas}</strong> citas registradas en <strong>${sourcesSet.size}</strong> páginas de codificación.`;
+    mContainer.appendChild(descEl);
+
+    // List of selected categories
+    const listEl = document.createElement("ul");
+    listEl.className = "cn-gestion-list";
+    Array.from(uniqueCodes).sort().forEach(code => {
+        const li = document.createElement("li");
+        li.innerText = `• ${code}`;
+        listEl.appendChild(li);
+    });
+    mContainer.appendChild(listEl);
+
+    // Options container
+    const optionsWrapper = document.createElement("div");
+    optionsWrapper.style.display = "flex";
+    optionsWrapper.style.flexDirection = "column";
+    optionsWrapper.style.gap = "12px";
+
+    // Option A: Desenlazar
+    const optA = document.createElement("div");
+    optA.className = "cn-gestion-option active";
+    optA.innerHTML = `
+        <div class="cn-option-header">
+            <input type="radio" name="cn-gestion-mode" id="cn-mode-unlink" checked style="cursor: pointer;">
+            <label for="cn-mode-unlink" style="cursor: pointer; font-weight: 600;">Desenlazar (quitar [[ ]])</label>
+        </div>
+        <div class="cn-option-desc">Los corchetes se eliminan pero el texto permanece como texto plano en los bloques.<br>Ejemplo: [[${Array.from(uniqueCodes)[0] || 'codigo'}]] → ${Array.from(uniqueCodes)[0] || 'codigo'}</div>
+    `;
+    
+    // Option B: Eliminar texto
+    const optB = document.createElement("div");
+    optB.className = "cn-gestion-option";
+    optB.innerHTML = `
+        <div class="cn-option-header">
+            <input type="radio" name="cn-gestion-mode" id="cn-mode-delete" style="cursor: pointer;">
+            <label for="cn-mode-delete" style="cursor: pointer; font-weight: 600;">Eliminar (reemplazar con [[CÓDIGO ELIMINADO]])</label>
+        </div>
+        <div class="cn-option-desc">La referencia se reemplaza por [[CÓDIGO ELIMINADO]] en todos los bloques donde aparece para preservar la integridad de la entrevista original.</div>
+    `;
+
+    // Extra checkbox for deleting pages (only relevant when deleting text)
+    const extraCheckboxContainer = document.createElement("label");
+    extraCheckboxContainer.style.display = "none"; // Hidden by default, shown when Opt B is active
+    extraCheckboxContainer.style.alignItems = "center";
+    extraCheckboxContainer.style.gap = "8px";
+    extraCheckboxContainer.style.fontSize = "13px";
+    extraCheckboxContainer.style.cursor = "pointer";
+    extraCheckboxContainer.style.paddingLeft = "24px";
+    extraCheckboxContainer.style.marginTop = "-6px";
+    extraCheckboxContainer.innerHTML = `
+        <input type="checkbox" id="cn-delete-pages" style="cursor: pointer;">
+        <span>También eliminar las páginas del grafo de Roam (${uniqueCodes.size} páginas)</span>
+    `;
+
+    optA.onclick = () => {
+        optA.classList.add("active");
+        optB.classList.remove("active");
+        optA.querySelector("input").checked = true;
+        extraCheckboxContainer.style.display = "none";
+    };
+
+    optB.onclick = () => {
+        optB.classList.add("active");
+        optA.classList.remove("active");
+        optB.querySelector("input").checked = true;
+        extraCheckboxContainer.style.display = "flex";
+    };
+
+    optionsWrapper.appendChild(optA);
+    optionsWrapper.appendChild(optB);
+    optionsWrapper.appendChild(extraCheckboxContainer);
+    mContainer.appendChild(optionsWrapper);
+
+    // Progress bar container (initially hidden)
+    const progressWrapper = document.createElement("div");
+    progressWrapper.style.display = "none";
+    progressWrapper.style.flexDirection = "column";
+    progressWrapper.style.gap = "6px";
+    progressWrapper.innerHTML = `
+        <div style="font-size: 12px; color: var(--sol-base01);" id="cn-progress-text">Procesando...</div>
+        <div class="cn-progress-container">
+            <div class="cn-progress-bar" id="cn-progress-bar"></div>
+        </div>
+    `;
+    mContainer.appendChild(progressWrapper);
+
+    // Action buttons
+    const actionsEl = document.createElement("div");
+    actionsEl.className = "cuali-buttons";
+    actionsEl.style.marginTop = "12px";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "cuali-btn cuali-btn-cancel";
+    btnCancel.innerText = "Cancelar";
+    btnCancel.onclick = () => {
+        document.body.removeChild(mOverlay);
+    };
+
+    const btnExecute = document.createElement("button");
+    btnExecute.className = "cuali-btn";
+    btnExecute.style.backgroundColor = "rgba(220, 50, 47, 0.08)";
+    btnExecute.style.border = "1px solid #dc322f";
+    btnExecute.style.color = "#dc322f";
+    btnExecute.innerText = "⚠️ Ejecutar";
+    
+    btnExecute.onclick = async () => {
+        const unlinkMode = document.getElementById("cn-mode-unlink").checked;
+        const deletePagesChecked = document.getElementById("cn-delete-pages").checked;
+
+        // Disable buttons during execution
+        btnCancel.disabled = true;
+        btnExecute.disabled = true;
+        btnCancel.style.opacity = "0.5";
+        btnExecute.style.opacity = "0.5";
+        optA.style.pointerEvents = "none";
+        optB.style.pointerEvents = "none";
+        extraCheckboxContainer.style.pointerEvents = "none";
+
+        progressWrapper.style.display = "flex";
+        const progressBar = document.getElementById("cn-progress-bar");
+        const progressText = document.getElementById("cn-progress-text");
+
+        // 1. Gather all blocks to update
+        const blocksToUpdate = [];
+        // Map from blockUid to set of category names to unlink/delete in it
+        const blockCategoryMap = {};
+
+        nodos.forEach(node => {
+            if (node.cites && node.fullName) {
+                node.cites.forEach(cite => {
+                    if (cite.uid) {
+                        if (!blockCategoryMap[cite.uid]) {
+                            blockCategoryMap[cite.uid] = new Set();
+                            blocksToUpdate.push(cite.uid);
+                        }
+                        blockCategoryMap[cite.uid].add(node.fullName);
+                    }
+                });
+            }
+        });
+
+        // Helper to escape regex
+        const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // 2. Process blocks sequentially
+        const totalBlocks = blocksToUpdate.length;
+        let processedBlocks = 0;
+
+        for (const blockUid of blocksToUpdate) {
+            processedBlocks++;
+            const pct = Math.round((processedBlocks / totalBlocks) * 100);
+            progressBar.style.width = `${pct}%`;
+            progressText.innerText = `Actualizando bloque ${processedBlocks} de ${totalBlocks}...`;
+
+            try {
+                // Get current block text
+                const currentText = obtenerTextoBloque(blockUid);
+                if (currentText !== null) {
+                    let newText = currentText;
+                    const categories = blockCategoryMap[blockUid];
+
+                    for (const catName of categories) {
+                        const escapedCat = escapeRegExp(catName);
+                        if (unlinkMode) {
+                            // Replace [[category]] with category
+                            const regex = new RegExp('\\[\\[' + escapedCat + '\\]\\]', 'g');
+                            newText = newText.replace(regex, catName);
+                        } else {
+                            // Replace [[category]] or #[[category]] with [[CÓDIGO ELIMINADO]]
+                            const regex = new RegExp('#?\\[\\[' + escapedCat + '\\]\\]', 'g');
+                            newText = newText.replace(regex, '[[CÓDIGO ELIMINADO]]');
+                        }
+                    }
+
+                    if (!unlinkMode) {
+                        // Clean up double spaces resulting from deletion
+                        newText = newText.replace(/ {2,}/g, ' ');
+                    }
+
+                    // Check if block is empty or contains only whitespace/punctuation
+                    if (!unlinkMode && /^\s*$/.test(newText)) {
+                        // Delete block
+                        await eliminarBloqueRoam(blockUid);
+                    } else {
+                        // Update block
+                        await actualizarTextoBloque(blockUid, newText.trim());
+                    }
+                }
+            } catch (err) {
+                console.error(`Error processing block ${blockUid}:`, err);
+            }
+
+            // Sleep a small bit for rate limiting
+            await sleep(50);
+        }
+
+        // 3. Optional: Delete pages from Roam
+        if (!unlinkMode && deletePagesChecked) {
+            progressText.innerText = `Eliminando páginas del grafo...`;
+            progressBar.style.width = `99%`;
+            await sleep(200);
+
+            for (const catName of uniqueCodes) {
+                try {
+                    const pageUid = obtenerUIDPaginaPorTitulo(catName);
+                    if (pageUid) {
+                        await eliminarPaginaRoam(pageUid);
+                    }
+                } catch (err) {
+                    console.error(`Error deleting page ${catName}:`, err);
+                }
+                await sleep(50);
+            }
+        }
+
+        progressText.innerText = `¡Completado con éxito!`;
+        progressBar.style.width = `100%`;
+        await sleep(500);
+
+        // Remove overlay and notify
+        document.body.removeChild(mOverlay);
+        mostrarNotificacion(`Se procesaron ${totalBlocks} bloques correctamente.`);
+
+        // Force clear global caches and call tab complete callback
+        refrescarCachesGlobales();
+        if (onComplete) {
+            onComplete();
+        }
+    };
+
+    actionsEl.appendChild(btnCancel);
+    actionsEl.appendChild(btnExecute);
+    mContainer.appendChild(actionsEl);
+
+    mOverlay.appendChild(mContainer);
+    document.body.appendChild(mOverlay);
+}
+
 function getAggregateSources(node) {
     const sources = new Set();
     node.cites.forEach(c => {
@@ -727,7 +1029,7 @@ function seleccionarNodosFiltrados(container, query, rootNodeObj) {
     }
 }
 
-function crearInterfazModal(rootNode, pageTitle) {
+function crearInterfazModal(rootNode, pageTitle, pageUid) {
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
     let arbolPivotado = false;
@@ -769,8 +1071,8 @@ function crearInterfazModal(rootNode, pageTitle) {
             background: var(--sol-base3);
             padding: 16px 24px;
             border-radius: 16px;
-            width: 90vw;
-            max-width: 1200px;
+            width: 95vw;
+            max-width: 1450px;
             height: 90vh;
             box-shadow: 0 30px 60px -15px rgba(7, 54, 66, 0.12), 0 15px 30px -10px rgba(0, 0, 0, 0.04);
             border: 1px solid rgba(147, 161, 161, 0.25);
@@ -842,6 +1144,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         .cuali-list-box.cuali-tree-container {
             border-top: none;
             border-radius: 0 0 8px 8px;
+            padding: 8px 0;
         }
         .cuali-list-item {
             padding: 10px 16px;
@@ -1111,6 +1414,104 @@ function crearInterfazModal(rootNode, pageTitle) {
             background: rgba(147, 161, 161, 0.06);
             color: var(--sol-base01);
         }
+        
+        .cn-info-note {
+            font-size: 12px;
+            color: var(--sol-base1);
+            font-style: italic;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background-color: rgba(147, 161, 161, 0.05);
+            border-left: 3px solid rgba(147, 161, 161, 0.2);
+            border-radius: 0 4px 4px 0;
+        }
+        
+        /* Modal Gestión / Eliminación */
+        .cn-gestion-modal {
+            background-color: #fcfcfa;
+            border: 1px solid rgba(147, 161, 161, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            color: var(--sol-base01);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 10000;
+        }
+        .cn-gestion-title {
+            font-family: Georgia, serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--sol-base02);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cn-gestion-list {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid rgba(147, 161, 161, 0.15);
+            border-radius: 6px;
+            padding: 8px 12px;
+            background-color: rgba(147, 161, 161, 0.02);
+            font-family: monospace;
+            font-size: 12px;
+            margin: 0;
+            list-style: none;
+        }
+        .cn-gestion-list li {
+            padding: 2px 0;
+        }
+        .cn-gestion-option {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border: 1px solid rgba(147, 161, 161, 0.15);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .cn-gestion-option:hover {
+            background-color: rgba(38, 139, 210, 0.02);
+            border-color: rgba(38, 139, 210, 0.2);
+        }
+        .cn-gestion-option.active {
+            background-color: rgba(38, 139, 210, 0.05);
+            border-color: var(--sol-blue);
+        }
+        .cn-option-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .cn-option-desc {
+            font-size: 12px;
+            color: var(--sol-base1);
+            padding-left: 24px;
+        }
+        .cn-progress-container {
+            width: 100%;
+            background-color: rgba(147, 161, 161, 0.15);
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .cn-progress-bar {
+            height: 100%;
+            background-color: var(--sol-blue);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
     `;
     document.head.appendChild(styleTag);
 
@@ -1142,11 +1543,11 @@ function crearInterfazModal(rootNode, pageTitle) {
     
     const btnTabCasos = document.createElement("button");
     btnTabCasos.className = "cuali-tab-btn";
-    btnTabCasos.innerText = "Casos (Empírico)";
+    btnTabCasos.innerText = "Casos";
     
     const btnTabCodebook = document.createElement("button");
     btnTabCodebook.className = "cuali-tab-btn";
-    btnTabCodebook.innerText = "Codificación (Analítico)";
+    btnTabCodebook.innerText = "Codificación";
     
     tabsNav.appendChild(btnTabExportacion);
     tabsNav.appendChild(btnTabCasos);
@@ -1187,7 +1588,7 @@ function crearInterfazModal(rootNode, pageTitle) {
         e.preventDefault();
         const uls = treeContainer.querySelectorAll("ul");
         uls.forEach(ul => {
-            if (ul !== rootUl) {
+            if (ul !== treeContainer.querySelector("ul")) {
                 ul.style.display = "none";
             }
         });
@@ -1231,12 +1632,28 @@ function crearInterfazModal(rootNode, pageTitle) {
         seleccionarNodosFiltrados(treeContainer, searchExportInput.value, rootNode);
     };
 
+    const btnGestionarExportacion = document.createElement("button");
+    btnGestionarExportacion.className = "cuali-btn-tool";
+    btnGestionarExportacion.innerHTML = "🗑️ Gestionar seleccionados";
+    btnGestionarExportacion.style.color = "#dc322f";
+    btnGestionarExportacion.style.borderColor = "rgba(220, 50, 47, 0.2)";
+    btnGestionarExportacion.onclick = (e) => {
+        e.preventDefault();
+        const nodos = recolectarNodosChecked(rootNode);
+        mostrarModalGestion(nodos, "contextual", () => renderTabExportacion(true));
+    };
+
     toolbarLeft.appendChild(btnExpandAll);
     toolbarLeft.appendChild(btnCollapseAll);
     toolbarLeft.appendChild(btnSelectAll);
     toolbarLeft.appendChild(btnDeselectAll);
     toolbarLeft.appendChild(btnSelectFiltered);
+    toolbarLeft.appendChild(btnGestionarExportacion);
     toolbar.appendChild(toolbarLeft);
+
+    const infoNoteExport = document.createElement("div");
+    infoNoteExport.className = "cn-info-note";
+    infoNoteExport.innerHTML = `ℹ️ <em>Códigos extraídos de los bloques de la página activa. Se detecta toda referencia <code>[[...]]</code> que contenga <code>/</code> en su nombre (indicando un namespace jerárquico).</em>`;
 
     const searchExportInput = document.createElement("input");
     searchExportInput.type = "text";
@@ -1256,23 +1673,44 @@ function crearInterfazModal(rootNode, pageTitle) {
     searchExportInput.oninput = () => {
         filtrarArbolDOM(treeContainer, searchExportInput.value);
     };
-    
-    const rootUl = document.createElement("ul");
-    rootUl.style.paddingLeft = "0";
-    rootUl.style.margin = "0";
-    
-    if (rootNode && Object.keys(rootNode.children).length > 0) {
-        const childNamesSorted = Object.keys(rootNode.children).sort();
-        childNamesSorted.forEach(childName => {
-            rootUl.appendChild(renderNodeHTML(rootNode.children[childName], true, 0));
-        });
-    } else {
-        rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos en la página activa.</li>";
+
+    function renderTabExportacion(rebuild = true) {
+        treeContainer.innerHTML = "";
+        
+        if (rebuild) {
+            const blocks = obtenerBloquesDePagina(pageUid);
+            const codeMap = procesarBloques(blocks);
+            const codeMapWithObjects = {};
+            for (const [code, uids] of Object.entries(codeMap)) {
+                codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+            }
+            rootNode = construirArbolCodigos(codeMapWithObjects);
+        }
+        
+        const rootUl = document.createElement("ul");
+        rootUl.style.paddingLeft = "0";
+        rootUl.style.margin = "0";
+        
+        if (rootNode && Object.keys(rootNode.children).length > 0) {
+            const childNamesSorted = Object.keys(rootNode.children).sort();
+            childNamesSorted.forEach(childName => {
+                rootUl.appendChild(renderNodeHTML(rootNode.children[childName], true, 0));
+            });
+        } else {
+            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px;'>No hay códigos en la página activa.</li>";
+        }
+        
+        treeContainer.appendChild(rootUl);
+        
+        if (searchExportInput.value) {
+            filtrarArbolDOM(treeContainer, searchExportInput.value);
+        }
     }
     
-    treeContainer.appendChild(rootUl);
+    renderTabExportacion(false);
     
     tabExportacion.appendChild(toolbar);
+    tabExportacion.appendChild(infoNoteExport);
     tabExportacion.appendChild(searchExportInput);
     tabExportacion.appendChild(tableHeaderExport);
     tabExportacion.appendChild(treeContainer);
@@ -1391,11 +1829,26 @@ function crearInterfazModal(rootNode, pageTitle) {
         seleccionarNodosFiltrados(listCasosContainer, searchCasosInput.value, casosTreeRoot);
     };
     
+    const btnGestionarCasos = document.createElement("button");
+    btnGestionarCasos.className = "cuali-btn-tool";
+    btnGestionarCasos.innerHTML = "🗑️ Gestionar seleccionados";
+    btnGestionarCasos.style.color = "#dc322f";
+    btnGestionarCasos.style.borderColor = "rgba(220, 50, 47, 0.2)";
+    btnGestionarCasos.onclick = (e) => {
+        e.preventDefault();
+        const nodos = recolectarNodosChecked(casosTreeRoot);
+        mostrarModalGestion(nodos, "casos", () => {
+            renderTabCasos();
+            renderTabCodebook(true);
+        });
+    };
+    
     toolbarCasosLeft.appendChild(btnExpandCasos);
     toolbarCasosLeft.appendChild(btnCollapseCasos);
     toolbarCasosLeft.appendChild(btnCasosSelectAll);
     toolbarCasosLeft.appendChild(btnCasosDeselectAll);
     toolbarCasosLeft.appendChild(btnCasosSelectFiltered);
+    toolbarCasosLeft.appendChild(btnGestionarCasos);
     toolbarCasos.appendChild(toolbarCasosLeft);
 
     const toolbarCasosRight = document.createElement("div");
@@ -1411,6 +1864,10 @@ function crearInterfazModal(rootNode, pageTitle) {
     };
     toolbarCasosRight.appendChild(btnRefreshCasos);
     toolbarCasos.appendChild(toolbarCasosRight);
+
+    const infoNoteCasos = document.createElement("div");
+    infoNoteCasos.className = "cn-info-note";
+    infoNoteCasos.innerHTML = `ℹ️ <em>Casos obtenidos de todas las páginas <code>entrevistadx/[Nombre]</code> del grafo. Los códigos se extraen de las subpáginas <code>entrevistadx/[Nombre]/transcripción/a analizar</code>.</em>`;
     
     const searchCasosInput = document.createElement("input");
     searchCasosInput.type = "text";
@@ -1433,6 +1890,7 @@ function crearInterfazModal(rootNode, pageTitle) {
     };
     
     tabCasos.appendChild(toolbarCasos);
+    tabCasos.appendChild(infoNoteCasos);
     tabCasos.appendChild(searchCasosInput);
     tabCasos.appendChild(tableHeaderCasos);
     tabCasos.appendChild(listCasosContainer);
@@ -1630,11 +2088,26 @@ function crearInterfazModal(rootNode, pageTitle) {
         seleccionarNodosFiltrados(listCodebookContainer, searchCodebookInput.value, codebookTreeRoot);
     };
 
+    const btnGestionarCodebook = document.createElement("button");
+    btnGestionarCodebook.className = "cuali-btn-tool";
+    btnGestionarCodebook.innerHTML = "🗑️ Gestionar seleccionados";
+    btnGestionarCodebook.style.color = "#dc322f";
+    btnGestionarCodebook.style.borderColor = "rgba(220, 50, 47, 0.2)";
+    btnGestionarCodebook.onclick = (e) => {
+        e.preventDefault();
+        const nodos = recolectarNodosChecked(codebookTreeRoot);
+        mostrarModalGestion(nodos, "codebook", () => {
+            renderTabCodebook(true);
+            renderTabCasos();
+        });
+    };
+
     toolbarCodebookLeft.appendChild(btnExpandCodebook);
     toolbarCodebookLeft.appendChild(btnCollapseCodebook);
     toolbarCodebookLeft.appendChild(btnCodebookSelectAll);
     toolbarCodebookLeft.appendChild(btnCodebookDeselectAll);
     toolbarCodebookLeft.appendChild(btnCodebookSelectFiltered);
+    toolbarCodebookLeft.appendChild(btnGestionarCodebook);
 
     smartGroupingContainer = document.createElement("label");
     smartGroupingContainer.style.display = "flex";
@@ -1797,7 +2270,12 @@ function crearInterfazModal(rootNode, pageTitle) {
         filtrarArbolDOM(listCodebookContainer, searchCodebookInput.value);
     };
 
+    const infoNoteCodebook = document.createElement("div");
+    infoNoteCodebook.className = "cn-info-note";
+    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code>, <code>cod/</code> y <code>memo/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>entrevistadx/.../transcripción/a analizar</code>).</em>`;
+
     tabCodebook.appendChild(toolbarCodebook);
+    tabCodebook.appendChild(infoNoteCodebook);
     tabCodebook.appendChild(searchCodebookInput);
     tabCodebook.appendChild(tableHeaderCodebook);
     tabCodebook.appendChild(listCodebookContainer);

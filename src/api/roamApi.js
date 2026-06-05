@@ -181,4 +181,29 @@ function obtenerReferenciasDeCodigos(titulos) {
     return map;
 }
 
+function obtenerTextoBloque(blockUid) {
+    const res = window.roamAlphaAPI.q(`[:find ?str :in $ ?uid :where [?b :block/uid ?uid] [?b :block/string ?str]]`, blockUid);
+    if (res && res.length > 0) return res[0][0];
+    return null;
+}
+
+function actualizarTextoBloque(blockUid, nuevoTexto) {
+    return window.roamAlphaAPI.updateBlock({block: {uid: blockUid, string: nuevoTexto}});
+}
+
+function eliminarBloqueRoam(blockUid) {
+    return window.roamAlphaAPI.deleteBlock({block: {uid: blockUid}});
+}
+
+function obtenerUIDPaginaPorTitulo(titulo) {
+    const res = window.roamAlphaAPI.q(`[:find ?uid :in $ ?t :where [?p :node/title ?t] [?p :block/uid ?uid]]`, titulo);
+    if (res && res.length > 0) return res[0][0];
+    return null;
+}
+
+function eliminarPaginaRoam(uidPagina) {
+    return window.roamAlphaAPI.deletePage({page: {uid: uidPagina}});
+}
+
+
 

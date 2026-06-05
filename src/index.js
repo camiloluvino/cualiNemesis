@@ -21,7 +21,7 @@ function iniciarExtractorCualitativo() {
 
     const rootNode = construirArbolCodigos(codeMapWithObjects);
 
-    crearInterfazModal(rootNode, pageTitle);
+    crearInterfazModal(rootNode, pageTitle, pageUid);
 }
 
 window.roamAlphaAPI.ui.commandPalette.addCommand({

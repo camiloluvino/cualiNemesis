@@ -49,6 +49,13 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Navegación Rápida:** Botón discreto `↗️` en cada nodo (visible en hover) para ir a la página de ese código directamente.
 * **Filtro Inteligente de Descendientes:** Al buscar un código en el Codebook, la interfaz no solo muestra los ancestros (para dar contexto jerárquico), sino que **muestra y expande automáticamente todos sus descendientes**.
 
+### 4. 🗑️ Gestión y Eliminación de Categorías (Auditable)
+* Permite desenlazar o eliminar las categorías cualitativas seleccionadas directamente desde la interfaz en cualquiera de las 3 pestañas.
+* **Modo Desenlazar**: Remueve los corchetes `[[  ]]` de las referencias, convirtiéndolas en texto plano (ej: `[[cod/afect]]` → `cod/afect`).
+* **Modo Eliminar (Auditable)**: Reemplaza las referencias seleccionadas con la etiqueta de página `[[CÓDIGO ELIMINADO]]`. Esto conserva la estructura de texto íntegra de la entrevista original y te permite usar los backlinks nativos de Roam sobre la página `[[CÓDIGO ELIMINADO]]` para auditar exactamente qué codificaciones fueron removidas y en qué bloques.
+* **Borrado de Páginas**: Opción de eliminar la página correspondiente en el grafo de Roam para cada código borrado.
+* **Barra de Progreso y Rate Limiting**: Ejecuta los cambios de forma secuencial y espaciada con una barra de progreso en tiempo real para evitar errores de API en Roam.
+
 ---
 
 ## 🛠️ Instalación y Uso en Roam Research
