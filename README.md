@@ -6,6 +6,8 @@ CualiNemesis es un plugin avanzado para **Roam Research** diseñado para asistir
 
 ## 🚀 Características Principales
 
+* 📐 **Diseño Compacto Unificado (v0.8.1):** Fusión de la barra de pestañas (izquierda) y los controles de herramientas (derecha) en una sola fila horizontal (`cuali-tabs`). Los botones e indicadores se alternan de forma dinámica según la pestaña activa, liberando espacio vertical significativo para concentrarse en las tablas de datos. El buscador de cada pestaña se despliega de forma toggleable directamente debajo al presionar 🔍.
+
 CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizadas para flujos de trabajo cualitativos a gran escala:
 
 ### 1. 📂 Exportación Contextual
@@ -17,7 +19,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Buscador interactivo con selección transversal:**
   * Filtra códigos y citas en tiempo real.
   * **Auto-selección al exportar:** Si hay texto en el buscador al hacer clic en exportar (Copiar/Crear página), se seleccionan automáticamente solo los nodos coincidentes de forma transversal.
-* **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (🔍).
+* **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (☑*), además de un buscador desplegable (🔍).
 
 ### 2. 👥 Casos (Entidades Empíricas)
 * Renderiza los casos y sus códigos en una estructura de tabla de árbol (TreeTable) interactiva y jerárquica de tres columnas: **Caso**, **Código** y **Citas**.
@@ -27,7 +29,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
   * **Copiar al portapapeles:** Copia los casos y códigos seleccionados respetando la jerarquía para pegar directamente en Roam.
   * **Crear nueva página:** Genera una página consolidada en Roam con las referencias de los bloques asociados.
   * **Auto-selección al exportar:** Al exportar con un término de búsqueda activo, pre-selecciona automáticamente los nodos que coinciden con el filtro de forma transversal.
-  * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (🔍).
+  * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (☑*), además de un buscador desplegable (🔍).
 * **Navegación Rápida:** Botón discreto `↗️` (visible en hover) que abre instantáneamente el caso o código seleccionado en la interfaz principal de Roam y cierra el panel.
 * Buscador integrado en tiempo real para filtrar casos y códigos simultáneamente.
 
@@ -45,7 +47,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
   * **Copiar al portapapeles:** Copia los códigos seleccionados y sus citas en formato árbol.
   * **Crear nueva página:** Genera una página consolidada en Roam con referencias de bloque de todo el grafo para los códigos seleccionados.
   * **Auto-selección al exportar:** Pre-selecciona de manera inteligente los nodos coincidentes con la búsqueda al usar cualquiera de los botones de exportación.
-  * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (🔍).
+  * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (☑*), además de un buscador desplegable (🔍) y refresco de caché (🔄).
 * **Navegación Rápida:** Botón discreto `↗️` en cada nodo (visible en hover) para ir a la página de ese código directamente.
 * **Filtro Inteligente de Descendientes:** Al buscar un código en el Codebook, la interfaz no solo muestra los ancestros (para dar contexto jerárquico), sino que **muestra y expande automáticamente todos sus descendientes**.
 

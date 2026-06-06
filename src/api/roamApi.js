@@ -41,7 +41,7 @@ function nodoSeleccionadoOHijosSeleccionados(node) {
     return false;
 }
 
-async function crearBloquesRecursivo(node, parentUid, order) {
+async function crearBloquesRecursivo(node, parentUid, order, numAbove = 0, numBelow = 0, plainText = false) {
     const nodeUid = window.roamAlphaAPI.util.generateUID();
     window.roamAlphaAPI.createBlock({
         location: {"parent-uid": parentUid, order: order},
@@ -52,12 +52,41 @@ async function crearBloquesRecursivo(node, parentUid, order) {
     let childOrder = 0;
     if (node.checked) {
         for (const citeUid of node.cites) {
-            window.roamAlphaAPI.createBlock({
-                location: {"parent-uid": nodeUid, order: childOrder},
-                block: {string: `((${citeUid.uid}))`}
-            });
-            childOrder++;
-            await sleep(50);
+            const context = obtenerContextoBloque(citeUid.uid, numAbove, numBelow);
+            if (context.length === 1 && !context[0].isContext) {
+                const blockStr = plainText ? (context[0].string || "") : `((${citeUid.uid}))`;
+                window.roamAlphaAPI.createBlock({
+                    location: {"parent-uid": nodeUid, order: childOrder},
+                    block: {string: blockStr}
+                });
+                childOrder++;
+                await sleep(50);
+            } else {
+                const containerUid = window.roamAlphaAPI.util.generateUID();
+                window.roamAlphaAPI.createBlock({
+                    location: {"parent-uid": nodeUid, order: childOrder},
+                    block: {string: `Cita con contexto:`, uid: containerUid}
+                });
+                childOrder++;
+                await sleep(50);
+                
+                let subOrder = 0;
+                for (const b of context) {
+                    let blockStr = "";
+                    if (plainText) {
+                        const prefix = b.isContext ? "[Contexto] " : "[Cita] ";
+                        blockStr = `${prefix}${b.string}`;
+                    } else {
+                        blockStr = `((${b.uid}))${b.isContext ? ' *(Contexto)*' : ''}`;
+                    }
+                    window.roamAlphaAPI.createBlock({
+                        location: {"parent-uid": containerUid, order: subOrder},
+                        block: {string: blockStr}
+                    });
+                    subOrder++;
+                    await sleep(50);
+                }
+            }
         }
     }
     
@@ -65,13 +94,13 @@ async function crearBloquesRecursivo(node, parentUid, order) {
     for (const childName of childNamesSorted) {
         const childNode = node.children[childName];
         if (nodoSeleccionadoOHijosSeleccionados(childNode)) {
-            await crearBloquesRecursivo(childNode, nodeUid, childOrder);
+            await crearBloquesRecursivo(childNode, nodeUid, childOrder, numAbove, numBelow, plainText);
             childOrder++;
         }
     }
 }
 
-async function generarPaginaConsolidadaArbol(originalTitle, rootNode) {
+async function generarPaginaConsolidadaArbol(originalTitle, rootNode, numAbove = 0, numBelow = 0, plainText = false) {
     const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
     const newTitle = `Consolidado: ${originalTitle} (${timestamp})`;
     const newPageUid = window.roamAlphaAPI.util.generateUID();
@@ -84,7 +113,7 @@ async function generarPaginaConsolidadaArbol(originalTitle, rootNode) {
     for (const childName of topLevelNamesSorted) {
         const childNode = rootNode.children[childName];
         if (nodoSeleccionadoOHijosSeleccionados(childNode)) {
-            await crearBloquesRecursivo(childNode, newPageUid, order);
+            await crearBloquesRecursivo(childNode, newPageUid, order, numAbove, numBelow, plainText);
             order++;
         }
     }
@@ -184,7 +213,59 @@ function obtenerReferenciasDeCodigos(titulos) {
 function obtenerTextoBloque(blockUid) {
     const res = window.roamAlphaAPI.q(`[:find ?str :in $ ?uid :where [?b :block/uid ?uid] [?b :block/string ?str]]`, blockUid);
     if (res && res.length > 0) return res[0][0];
-    return null;
+    return "";
+}
+
+function obtenerHermanosBloque(blockUid) {
+    const res = window.roamAlphaAPI.q(`
+        [:find ?parentUid ?childUid ?childOrder
+         :in $ ?blockUid
+         :where
+         [?b :block/uid ?blockUid]
+         [?parent :block/children ?b]
+         [?parent :block/uid ?parentUid]
+         [?parent :block/children ?c]
+         [?c :block/uid ?childUid]
+         [?c :block/order ?childOrder]]
+    `, blockUid);
+    if (!res || res.length === 0) return [];
+    
+    // Convert to objects
+    const siblings = res.map(r => ({
+        parentUid: r[0],
+        uid: r[1],
+        order: r[2]
+    }));
+    
+    // Sort by order
+    siblings.sort((a, b) => a.order - b.order);
+    return siblings;
+}
+
+function obtenerContextoBloque(blockUid, numAbove = 0, numBelow = 0) {
+    const siblings = obtenerHermanosBloque(blockUid);
+    if (siblings.length === 0) {
+        return [{ uid: blockUid, string: obtenerTextoBloque(blockUid) || "", isContext: false }];
+    }
+    
+    const targetIndex = siblings.findIndex(s => s.uid === blockUid);
+    if (targetIndex === -1) {
+        return [{ uid: blockUid, string: obtenerTextoBloque(blockUid) || "", isContext: false }];
+    }
+    
+    const startIndex = Math.max(0, targetIndex - numAbove);
+    const endIndex = Math.min(siblings.length - 1, targetIndex + numBelow);
+    
+    const contextBlocks = [];
+    for (let i = startIndex; i <= endIndex; i++) {
+        const sib = siblings[i];
+        contextBlocks.push({
+            uid: sib.uid,
+            string: obtenerTextoBloque(sib.uid) || "",
+            isContext: sib.uid !== blockUid
+        });
+    }
+    return contextBlocks;
 }
 
 function actualizarTextoBloque(blockUid, nuevoTexto) {

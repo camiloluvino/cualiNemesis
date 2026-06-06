@@ -911,7 +911,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     return li;
 }
 
-function generarTextoPortapapeles(node, indentLevel = 0) {
+function generarTextoPortapapeles(node, indentLevel = 0, numAbove = 0, numBelow = 0, plainText = false) {
     let text = "";
     const indent = "\t".repeat(indentLevel);
     
@@ -919,7 +919,26 @@ function generarTextoPortapapeles(node, indentLevel = 0) {
         text += `${indent}[[${node.fullName}]]\n`;
         if (node.checked) {
             node.cites.forEach(citeUid => {
-                text += `${indent}\t((${citeUid.uid}))\n`;
+                const context = obtenerContextoBloque(citeUid.uid, numAbove, numBelow);
+                if (context.length === 1 && !context[0].isContext) {
+                    if (plainText) {
+                        text += `${indent}\t[Cita] ${context[0].string}\n`;
+                    } else {
+                        text += `${indent}\t((${citeUid.uid}))\n`;
+                    }
+                } else {
+                    if (plainText) {
+                        context.forEach(b => {
+                            const prefix = b.isContext ? "[Contexto] " : "[Cita] ";
+                            text += `${indent}\t${prefix}${b.string}\n`;
+                        });
+                    } else {
+                        text += `${indent}\tCita con contexto:\n`;
+                        context.forEach(b => {
+                            text += `${indent}\t\t((${b.uid}))${b.isContext ? ' *(Contexto)*' : ''}\n`;
+                        });
+                    }
+                }
             });
         }
     }
@@ -929,7 +948,7 @@ function generarTextoPortapapeles(node, indentLevel = 0) {
     for (const childName of childNamesSorted) {
         const childNode = node.children[childName];
         if (nodoSeleccionadoOHijosSeleccionados(childNode)) {
-            text += generarTextoPortapapeles(childNode, childIndentLevel);
+            text += generarTextoPortapapeles(childNode, childIndentLevel, numAbove, numBelow, plainText);
         }
     }
     return text;
@@ -1035,6 +1054,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     let arbolPivotado = false;
     let noDuplicarCompartidos = false;
     let smartGroupingContainer = null;
+    
+    let numBloquesArriba = 0;
+    let numBloquesAbajo = 0;
+    let exportarTextoPlano = false;
 
     let existingStyles = document.getElementById("cuali-nemesis-styles");
     if (existingStyles) {
@@ -1099,9 +1122,27 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         /* Tabs Styles */
         .cuali-tabs {
             display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
             border-bottom: 1px solid rgba(147, 161, 161, 0.2);
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             gap: 12px;
+            min-height: 36px;
+        }
+        .cuali-tabs-left {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+        .cuali-tabs-right {
+            display: none;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+            padding-bottom: 4px;
+            justify-content: flex-end;
         }
         .cuali-tab-btn {
             padding: 4px 8px 8px 8px;
@@ -1291,7 +1332,34 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         }
         .cuali-toolbar-left {
             display: flex;
-            gap: 16px;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .cuali-btn-tool[title] {
+            position: relative;
+        }
+        .cuali-btn-tool[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--sol-base02, #073642);
+            color: var(--sol-base2, #eee8d5);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            z-index: 10000;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .cuali-toolbar-separator {
+            width: 1px;
+            height: 18px;
+            background: rgba(147, 161, 161, 0.2);
+            margin: 0 4px;
         }
         .cuali-btn-tool {
             background: transparent;
@@ -1416,14 +1484,15 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         }
         
         .cn-info-note {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--sol-base1);
             font-style: italic;
-            margin-bottom: 8px;
+            margin-top: 6px;
+            margin-bottom: 2px;
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 10px;
+            padding: 5px 10px;
             background-color: rgba(147, 161, 161, 0.05);
             border-left: 3px solid rgba(147, 161, 161, 0.2);
             border-radius: 0 4px 4px 0;
@@ -1515,6 +1584,112 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     `;
     document.head.appendChild(styleTag);
 
+    const configListeners = [];
+    function notificarCambioConfiguracion() {
+        configListeners.forEach(listener => listener());
+    }
+
+    function crearSeccionConfiguracionExportacion() {
+        const container = document.createElement("div");
+        container.className = "cuali-export-config-row";
+        container.style.display = "flex";
+        container.style.alignItems = "center";
+        container.style.gap = "16px";
+        container.style.marginBottom = "8px";
+        container.style.padding = "6px 12px";
+        container.style.backgroundColor = "rgba(147, 161, 161, 0.05)";
+        container.style.borderRadius = "8px";
+        container.style.border = "1px solid rgba(147, 161, 161, 0.15)";
+        container.style.fontSize = "13px";
+        container.style.color = "var(--sol-base01)";
+
+        const titleLabel = document.createElement("span");
+        titleLabel.style.fontWeight = "600";
+        titleLabel.style.marginRight = "auto";
+        titleLabel.innerHTML = "⚙️ Configuración de Exportación:";
+
+        // Above input
+        const labelArriba = document.createElement("label");
+        labelArriba.style.display = "flex";
+        labelArriba.style.alignItems = "center";
+        labelArriba.style.gap = "6px";
+        labelArriba.innerHTML = "Bloques arriba:";
+        
+        const inputArriba = document.createElement("input");
+        inputArriba.type = "number";
+        inputArriba.min = "0";
+        inputArriba.max = "10";
+        inputArriba.value = numBloquesArriba;
+        inputArriba.style.width = "45px";
+        inputArriba.style.padding = "3px 6px";
+        inputArriba.style.border = "1px solid rgba(147, 161, 161, 0.2)";
+        inputArriba.style.borderRadius = "4px";
+        inputArriba.style.backgroundColor = "var(--sol-base3)";
+        inputArriba.style.color = "var(--sol-base01)";
+        inputArriba.onchange = () => {
+            numBloquesArriba = Math.max(0, parseInt(inputArriba.value) || 0);
+            notificarCambioConfiguracion();
+        };
+        labelArriba.appendChild(inputArriba);
+
+        // Below input
+        const labelAbajo = document.createElement("label");
+        labelAbajo.style.display = "flex";
+        labelAbajo.style.alignItems = "center";
+        labelAbajo.style.gap = "6px";
+        labelAbajo.innerHTML = "Bloques abajo:";
+        
+        const inputAbajo = document.createElement("input");
+        inputAbajo.type = "number";
+        inputAbajo.min = "0";
+        inputAbajo.max = "10";
+        inputAbajo.value = numBloquesAbajo;
+        inputAbajo.style.width = "45px";
+        inputAbajo.style.padding = "3px 6px";
+        inputAbajo.style.border = "1px solid rgba(147, 161, 161, 0.2)";
+        inputAbajo.style.borderRadius = "4px";
+        inputAbajo.style.backgroundColor = "var(--sol-base3)";
+        inputAbajo.style.color = "var(--sol-base01)";
+        inputAbajo.onchange = () => {
+            numBloquesAbajo = Math.max(0, parseInt(inputAbajo.value) || 0);
+            notificarCambioConfiguracion();
+        };
+        labelAbajo.appendChild(inputAbajo);
+
+        // Plain text checkbox
+        const labelTextoPlano = document.createElement("label");
+        labelTextoPlano.style.display = "flex";
+        labelTextoPlano.style.alignItems = "center";
+        labelTextoPlano.style.gap = "6px";
+        labelTextoPlano.style.cursor = "pointer";
+        labelTextoPlano.title = "Resuelve las referencias ((UID)) a su texto real para pegarlo en IA externas.";
+        
+        const checkboxTextoPlano = document.createElement("input");
+        checkboxTextoPlano.type = "checkbox";
+        checkboxTextoPlano.checked = exportarTextoPlano;
+        checkboxTextoPlano.style.cursor = "pointer";
+        checkboxTextoPlano.onchange = () => {
+            exportarTextoPlano = checkboxTextoPlano.checked;
+            notificarCambioConfiguracion();
+        };
+        
+        labelTextoPlano.appendChild(checkboxTextoPlano);
+        labelTextoPlano.appendChild(document.createTextNode("Exportar texto plano (IA/Externo)"));
+
+        container.appendChild(titleLabel);
+        container.appendChild(labelArriba);
+        container.appendChild(labelAbajo);
+        container.appendChild(labelTextoPlano);
+
+        configListeners.push(() => {
+            inputArriba.value = numBloquesArriba;
+            inputAbajo.value = numBloquesAbajo;
+            checkboxTextoPlano.checked = exportarTextoPlano;
+        });
+
+        return container;
+    }
+
     const overlay = document.createElement("div");
     overlay.id = "extractor-cualitativo-overlay";
     overlay.style.position = "fixed";
@@ -1537,6 +1712,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const tabsNav = document.createElement("div");
     tabsNav.className = "cuali-tabs";
     
+    const tabsLeft = document.createElement("div");
+    tabsLeft.className = "cuali-tabs-left";
+    
     const btnTabExportacion = document.createElement("button");
     btnTabExportacion.className = "cuali-tab-btn active";
     btnTabExportacion.innerText = "Exportación Contextual";
@@ -1549,9 +1727,25 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnTabCodebook.className = "cuali-tab-btn";
     btnTabCodebook.innerText = "Codificación";
     
-    tabsNav.appendChild(btnTabExportacion);
-    tabsNav.appendChild(btnTabCasos);
-    tabsNav.appendChild(btnTabCodebook);
+    tabsLeft.appendChild(btnTabExportacion);
+    tabsLeft.appendChild(btnTabCasos);
+    tabsLeft.appendChild(btnTabCodebook);
+    tabsNav.appendChild(tabsLeft);
+
+    const controlsExport = document.createElement("div");
+    controlsExport.className = "cuali-tabs-right";
+    controlsExport.style.display = "flex"; // Active initially
+    
+    const controlsCasos = document.createElement("div");
+    controlsCasos.className = "cuali-tabs-right";
+    
+    const controlsCodebook = document.createElement("div");
+    controlsCodebook.className = "cuali-tabs-right";
+
+    tabsNav.appendChild(controlsExport);
+    tabsNav.appendChild(controlsCasos);
+    tabsNav.appendChild(controlsCodebook);
+    
     modal.appendChild(tabsNav);
 
     // Tab Contents Containers
@@ -1565,14 +1759,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabCodebook.className = "cuali-tab-content";
 
     // --- POPULATE TAB: EXPORTACION ---
-    const toolbar = document.createElement("div");
-    toolbar.className = "cuali-toolbar";
-    const toolbarLeft = document.createElement("div");
-    toolbarLeft.className = "cuali-toolbar-left";
-
     const btnExpandAll = document.createElement("button");
     btnExpandAll.className = "cuali-btn-tool";
-    btnExpandAll.innerText = "⊞ Expandir todo";
+    btnExpandAll.innerText = "⊞";
+    btnExpandAll.title = "Expandir todo";
     btnExpandAll.onclick = (e) => {
         e.preventDefault();
         const uls = treeContainer.querySelectorAll("ul");
@@ -1583,7 +1773,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCollapseAll = document.createElement("button");
     btnCollapseAll.className = "cuali-btn-tool";
-    btnCollapseAll.innerText = "⊟ Colapsar todo";
+    btnCollapseAll.innerText = "⊟";
+    btnCollapseAll.title = "Colapsar todo";
     btnCollapseAll.onclick = (e) => {
         e.preventDefault();
         const uls = treeContainer.querySelectorAll("ul");
@@ -1598,7 +1789,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnSelectAll = document.createElement("button");
     btnSelectAll.className = "cuali-btn-tool";
-    btnSelectAll.innerText = "☑ Seleccionar todo";
+    btnSelectAll.innerText = "☑";
+    btnSelectAll.title = "Seleccionar todo";
     btnSelectAll.onclick = (e) => {
         e.preventDefault();
         if (rootNode) updateNodeCheckedState(rootNode, true);
@@ -1612,7 +1804,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnDeselectAll = document.createElement("button");
     btnDeselectAll.className = "cuali-btn-tool";
-    btnDeselectAll.innerText = "☐ Deseleccionar todo";
+    btnDeselectAll.innerText = "☐";
+    btnDeselectAll.title = "Deseleccionar todo";
     btnDeselectAll.onclick = (e) => {
         e.preventDefault();
         if (rootNode) updateNodeCheckedState(rootNode, false);
@@ -1626,7 +1819,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnSelectFiltered = document.createElement("button");
     btnSelectFiltered.className = "cuali-btn-tool";
-    btnSelectFiltered.innerText = "🔍 Seleccionar filtrados";
+    btnSelectFiltered.innerText = "☑*";
+    btnSelectFiltered.title = "Seleccionar filtrados";
     btnSelectFiltered.onclick = (e) => {
         e.preventDefault();
         seleccionarNodosFiltrados(treeContainer, searchExportInput.value, rootNode);
@@ -1634,7 +1828,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnGestionarExportacion = document.createElement("button");
     btnGestionarExportacion.className = "cuali-btn-tool";
-    btnGestionarExportacion.innerHTML = "🗑️ Gestionar seleccionados";
+    btnGestionarExportacion.innerHTML = "🗑️ Gestionar";
     btnGestionarExportacion.style.color = "#dc322f";
     btnGestionarExportacion.style.borderColor = "rgba(220, 50, 47, 0.2)";
     btnGestionarExportacion.onclick = (e) => {
@@ -1643,13 +1837,38 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         mostrarModalGestion(nodos, "contextual", () => renderTabExportacion(true));
     };
 
-    toolbarLeft.appendChild(btnExpandAll);
-    toolbarLeft.appendChild(btnCollapseAll);
-    toolbarLeft.appendChild(btnSelectAll);
-    toolbarLeft.appendChild(btnDeselectAll);
-    toolbarLeft.appendChild(btnSelectFiltered);
-    toolbarLeft.appendChild(btnGestionarExportacion);
-    toolbar.appendChild(toolbarLeft);
+    const btnToggleSearchExport = document.createElement("button");
+    btnToggleSearchExport.className = "cuali-btn-tool";
+    btnToggleSearchExport.innerText = "🔍";
+    btnToggleSearchExport.title = "Mostrar / Ocultar Buscador";
+    btnToggleSearchExport.onclick = (e) => {
+        e.preventDefault();
+        searchExportInput.style.display = searchExportInput.style.display === "none" ? "block" : "none";
+        if (searchExportInput.style.display === "block") searchExportInput.focus();
+    };
+
+    controlsExport.appendChild(btnGestionarExportacion);
+    
+    const sepExport1 = document.createElement("div");
+    sepExport1.className = "cuali-toolbar-separator";
+    controlsExport.appendChild(sepExport1);
+    
+    controlsExport.appendChild(btnToggleSearchExport);
+    
+    const sepExport2 = document.createElement("div");
+    sepExport2.className = "cuali-toolbar-separator";
+    controlsExport.appendChild(sepExport2);
+    
+    controlsExport.appendChild(btnExpandAll);
+    controlsExport.appendChild(btnCollapseAll);
+    
+    const sepExport3 = document.createElement("div");
+    sepExport3.className = "cuali-toolbar-separator";
+    controlsExport.appendChild(sepExport3);
+    
+    controlsExport.appendChild(btnSelectAll);
+    controlsExport.appendChild(btnDeselectAll);
+    controlsExport.appendChild(btnSelectFiltered);
 
     const infoNoteExport = document.createElement("div");
     infoNoteExport.className = "cn-info-note";
@@ -1659,6 +1878,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     searchExportInput.type = "text";
     searchExportInput.className = "cuali-search-input";
     searchExportInput.placeholder = "🔍 Filtrar códigos de la página activa...";
+    searchExportInput.style.display = "none";
     
     const tableHeaderExport = document.createElement("div");
     tableHeaderExport.className = "cuali-table-header";
@@ -1708,12 +1928,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     }
     
     renderTabExportacion(false);
-    
-    tabExportacion.appendChild(toolbar);
-    tabExportacion.appendChild(infoNoteExport);
     tabExportacion.appendChild(searchExportInput);
     tabExportacion.appendChild(tableHeaderExport);
     tabExportacion.appendChild(treeContainer);
+    tabExportacion.appendChild(infoNoteExport);
     
     const exportButtons = document.createElement("div");
     exportButtons.className = "cuali-buttons";
@@ -1730,7 +1948,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
         }
-        const clipboardText = generarTextoPortapapeles(rootNode);
+        const clipboardText = generarTextoPortapapeles(rootNode, 0, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
         try {
             await navigator.clipboard.writeText(clipboardText.trim());
             mostrarNotificacion("Códigos copiados en formato árbol.");
@@ -1753,23 +1971,21 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol(pageTitle, rootNode);
+        await generarPaginaConsolidadaArbol(pageTitle, rootNode, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
     };
 
     exportButtons.appendChild(btnClipboard);
     exportButtons.appendChild(btnPage);
+    
+    const configSectionExport = crearSeccionConfiguracionExportacion();
+    tabExportacion.appendChild(configSectionExport);
     tabExportacion.appendChild(exportButtons);
 
     // --- POPULATE TAB: CASOS ---
-    const toolbarCasos = document.createElement("div");
-    toolbarCasos.className = "cuali-toolbar";
-    
-    const toolbarCasosLeft = document.createElement("div");
-    toolbarCasosLeft.className = "cuali-toolbar-left";
-    
     const btnExpandCasos = document.createElement("button");
     btnExpandCasos.className = "cuali-btn-tool";
-    btnExpandCasos.innerText = "⊞ Expandir todo";
+    btnExpandCasos.innerText = "⊞";
+    btnExpandCasos.title = "Expandir todo";
     btnExpandCasos.onclick = (e) => {
         e.preventDefault();
         const uls = listCasosContainer.querySelectorAll("ul");
@@ -1780,7 +1996,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCollapseCasos = document.createElement("button");
     btnCollapseCasos.className = "cuali-btn-tool";
-    btnCollapseCasos.innerText = "⊟ Colapsar todo";
+    btnCollapseCasos.innerText = "⊟";
+    btnCollapseCasos.title = "Colapsar todo";
     btnCollapseCasos.onclick = (e) => {
         e.preventDefault();
         const uls = listCasosContainer.querySelectorAll("ul");
@@ -1795,7 +2012,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCasosSelectAll = document.createElement("button");
     btnCasosSelectAll.className = "cuali-btn-tool";
-    btnCasosSelectAll.innerText = "☑ Seleccionar todo";
+    btnCasosSelectAll.innerText = "☑";
+    btnCasosSelectAll.title = "Seleccionar todo";
     btnCasosSelectAll.onclick = (e) => {
         e.preventDefault();
         if (casosTreeRoot) updateNodeCheckedState(casosTreeRoot, true);
@@ -1809,7 +2027,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCasosDeselectAll = document.createElement("button");
     btnCasosDeselectAll.className = "cuali-btn-tool";
-    btnCasosDeselectAll.innerText = "☐ Deseleccionar todo";
+    btnCasosDeselectAll.innerText = "☐";
+    btnCasosDeselectAll.title = "Deseleccionar todo";
     btnCasosDeselectAll.onclick = (e) => {
         e.preventDefault();
         if (casosTreeRoot) updateNodeCheckedState(casosTreeRoot, false);
@@ -1823,7 +2042,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCasosSelectFiltered = document.createElement("button");
     btnCasosSelectFiltered.className = "cuali-btn-tool";
-    btnCasosSelectFiltered.innerText = "🔍 Seleccionar filtrados";
+    btnCasosSelectFiltered.innerText = "☑*";
+    btnCasosSelectFiltered.title = "Seleccionar filtrados";
     btnCasosSelectFiltered.onclick = (e) => {
         e.preventDefault();
         seleccionarNodosFiltrados(listCasosContainer, searchCasosInput.value, casosTreeRoot);
@@ -1831,7 +2051,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     
     const btnGestionarCasos = document.createElement("button");
     btnGestionarCasos.className = "cuali-btn-tool";
-    btnGestionarCasos.innerHTML = "🗑️ Gestionar seleccionados";
+    btnGestionarCasos.innerHTML = "🗑️ Gestionar";
     btnGestionarCasos.style.color = "#dc322f";
     btnGestionarCasos.style.borderColor = "rgba(220, 50, 47, 0.2)";
     btnGestionarCasos.onclick = (e) => {
@@ -1842,19 +2062,21 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             renderTabCodebook(true);
         });
     };
-    
-    toolbarCasosLeft.appendChild(btnExpandCasos);
-    toolbarCasosLeft.appendChild(btnCollapseCasos);
-    toolbarCasosLeft.appendChild(btnCasosSelectAll);
-    toolbarCasosLeft.appendChild(btnCasosDeselectAll);
-    toolbarCasosLeft.appendChild(btnCasosSelectFiltered);
-    toolbarCasosLeft.appendChild(btnGestionarCasos);
-    toolbarCasos.appendChild(toolbarCasosLeft);
 
-    const toolbarCasosRight = document.createElement("div");
+    const btnToggleSearchCasos = document.createElement("button");
+    btnToggleSearchCasos.className = "cuali-btn-tool";
+    btnToggleSearchCasos.innerText = "🔍";
+    btnToggleSearchCasos.title = "Mostrar / Ocultar Buscador";
+    btnToggleSearchCasos.onclick = (e) => {
+        e.preventDefault();
+        searchCasosInput.style.display = searchCasosInput.style.display === "none" ? "block" : "none";
+        if (searchCasosInput.style.display === "block") searchCasosInput.focus();
+    };
+
     const btnRefreshCasos = document.createElement("button");
     btnRefreshCasos.className = "cuali-btn-tool";
-    btnRefreshCasos.innerText = "🔄 Refrescar Listas";
+    btnRefreshCasos.innerText = "🔄";
+    btnRefreshCasos.title = "Refrescar Listas";
     btnRefreshCasos.onclick = (e) => {
         e.preventDefault();
         refrescarCachesGlobales();
@@ -1862,8 +2084,35 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         renderTabCodebook();
         mostrarNotificacion("Listas refrescadas exitosamente.");
     };
-    toolbarCasosRight.appendChild(btnRefreshCasos);
-    toolbarCasos.appendChild(toolbarCasosRight);
+
+    controlsCasos.appendChild(btnGestionarCasos);
+    
+    const sepCasos1 = document.createElement("div");
+    sepCasos1.className = "cuali-toolbar-separator";
+    controlsCasos.appendChild(sepCasos1);
+    
+    controlsCasos.appendChild(btnToggleSearchCasos);
+    
+    const sepCasos2 = document.createElement("div");
+    sepCasos2.className = "cuali-toolbar-separator";
+    controlsCasos.appendChild(sepCasos2);
+    
+    controlsCasos.appendChild(btnExpandCasos);
+    controlsCasos.appendChild(btnCollapseCasos);
+    
+    const sepCasos3 = document.createElement("div");
+    sepCasos3.className = "cuali-toolbar-separator";
+    controlsCasos.appendChild(sepCasos3);
+    
+    controlsCasos.appendChild(btnCasosSelectAll);
+    controlsCasos.appendChild(btnCasosDeselectAll);
+    controlsCasos.appendChild(btnCasosSelectFiltered);
+    
+    const sepCasos4 = document.createElement("div");
+    sepCasos4.className = "cuali-toolbar-separator";
+    controlsCasos.appendChild(sepCasos4);
+    
+    controlsCasos.appendChild(btnRefreshCasos);
 
     const infoNoteCasos = document.createElement("div");
     infoNoteCasos.className = "cn-info-note";
@@ -1873,6 +2122,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     searchCasosInput.type = "text";
     searchCasosInput.className = "cuali-search-input";
     searchCasosInput.placeholder = "🔍 Filtrar casos por nombre o códigos...";
+    searchCasosInput.style.display = "none";
 
     const tableHeaderCasos = document.createElement("div");
     tableHeaderCasos.className = "cuali-table-header";
@@ -1889,11 +2139,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         filtrarArbolDOM(listCasosContainer, searchCasosInput.value);
     };
     
-    tabCasos.appendChild(toolbarCasos);
-    tabCasos.appendChild(infoNoteCasos);
     tabCasos.appendChild(searchCasosInput);
     tabCasos.appendChild(tableHeaderCasos);
     tabCasos.appendChild(listCasosContainer);
+    tabCasos.appendChild(infoNoteCasos);
 
     const casosButtons = document.createElement("div");
     casosButtons.className = "cuali-buttons";
@@ -1910,7 +2159,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             mostrarNotificacion("Selecciona al menos un caso o código.");
             return;
         }
-        const clipboardText = generarTextoPortapapeles(casosTreeRoot);
+        const clipboardText = generarTextoPortapapeles(casosTreeRoot, 0, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
         try {
             await navigator.clipboard.writeText(clipboardText.trim());
             mostrarNotificacion("Casos copiados en formato árbol.");
@@ -1933,11 +2182,14 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol("Casos Consolidados", casosTreeRoot);
+        await generarPaginaConsolidadaArbol("Casos Consolidados", casosTreeRoot, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
     };
 
     casosButtons.appendChild(btnCasosClipboard);
     casosButtons.appendChild(btnCasosPage);
+    
+    const configSectionCasos = crearSeccionConfiguracionExportacion();
+    tabCasos.appendChild(configSectionCasos);
     tabCasos.appendChild(casosButtons);
 
     function fixCasosTreeFullNames(node, isRoot = true) {
@@ -2020,15 +2272,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     }
 
     // --- POPULATE TAB: CODEBOOK ---
-    const toolbarCodebook = document.createElement("div");
-    toolbarCodebook.className = "cuali-toolbar";
-    
-    const toolbarCodebookLeft = document.createElement("div");
-    toolbarCodebookLeft.className = "cuali-toolbar-left";
-    
     const btnExpandCodebook = document.createElement("button");
     btnExpandCodebook.className = "cuali-btn-tool";
-    btnExpandCodebook.innerText = "⊞ Expandir todo";
+    btnExpandCodebook.innerText = "⊞";
+    btnExpandCodebook.title = "Expandir todo";
     btnExpandCodebook.onclick = (e) => {
         e.preventDefault();
         const uls = listCodebookContainer.querySelectorAll("ul");
@@ -2039,7 +2286,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCollapseCodebook = document.createElement("button");
     btnCollapseCodebook.className = "cuali-btn-tool";
-    btnCollapseCodebook.innerText = "⊟ Colapsar todo";
+    btnCollapseCodebook.innerText = "⊟";
+    btnCollapseCodebook.title = "Colapsar todo";
     btnCollapseCodebook.onclick = (e) => {
         e.preventDefault();
         const uls = listCodebookContainer.querySelectorAll("ul");
@@ -2054,7 +2302,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCodebookSelectAll = document.createElement("button");
     btnCodebookSelectAll.className = "cuali-btn-tool";
-    btnCodebookSelectAll.innerText = "☑ Seleccionar todo";
+    btnCodebookSelectAll.innerText = "☑";
+    btnCodebookSelectAll.title = "Seleccionar todo";
     btnCodebookSelectAll.onclick = (e) => {
         e.preventDefault();
         if (codebookTreeRoot) updateNodeCheckedState(codebookTreeRoot, true);
@@ -2068,7 +2317,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCodebookDeselectAll = document.createElement("button");
     btnCodebookDeselectAll.className = "cuali-btn-tool";
-    btnCodebookDeselectAll.innerText = "☐ Deseleccionar todo";
+    btnCodebookDeselectAll.innerText = "☐";
+    btnCodebookDeselectAll.title = "Deseleccionar todo";
     btnCodebookDeselectAll.onclick = (e) => {
         e.preventDefault();
         if (codebookTreeRoot) updateNodeCheckedState(codebookTreeRoot, false);
@@ -2082,7 +2332,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCodebookSelectFiltered = document.createElement("button");
     btnCodebookSelectFiltered.className = "cuali-btn-tool";
-    btnCodebookSelectFiltered.innerText = "🔍 Seleccionar filtrados";
+    btnCodebookSelectFiltered.innerText = "☑*";
+    btnCodebookSelectFiltered.title = "Seleccionar filtrados";
     btnCodebookSelectFiltered.onclick = (e) => {
         e.preventDefault();
         seleccionarNodosFiltrados(listCodebookContainer, searchCodebookInput.value, codebookTreeRoot);
@@ -2090,7 +2341,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnGestionarCodebook = document.createElement("button");
     btnGestionarCodebook.className = "cuali-btn-tool";
-    btnGestionarCodebook.innerHTML = "🗑️ Gestionar seleccionados";
+    btnGestionarCodebook.innerHTML = "🗑️ Gestionar";
     btnGestionarCodebook.style.color = "#dc322f";
     btnGestionarCodebook.style.borderColor = "rgba(220, 50, 47, 0.2)";
     btnGestionarCodebook.onclick = (e) => {
@@ -2101,13 +2352,6 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             renderTabCasos();
         });
     };
-
-    toolbarCodebookLeft.appendChild(btnExpandCodebook);
-    toolbarCodebookLeft.appendChild(btnCollapseCodebook);
-    toolbarCodebookLeft.appendChild(btnCodebookSelectAll);
-    toolbarCodebookLeft.appendChild(btnCodebookDeselectAll);
-    toolbarCodebookLeft.appendChild(btnCodebookSelectFiltered);
-    toolbarCodebookLeft.appendChild(btnGestionarCodebook);
 
     smartGroupingContainer = document.createElement("label");
     smartGroupingContainer.style.display = "flex";
@@ -2143,8 +2387,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     };
     
     smartGroupingContainer.appendChild(chkSmartGrouping);
-    smartGroupingContainer.appendChild(document.createTextNode("No duplicar códigos compartidos"));
-    toolbarCodebookLeft.appendChild(smartGroupingContainer);
+    smartGroupingContainer.appendChild(document.createTextNode("No duplicar"));
 
     // Selector de nivel de pivote (Profundidad)
     const lblPivotLevel = document.createElement("span");
@@ -2202,13 +2445,13 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnPivotGlobal.className = "cuali-btn-tool";
     btnPivotGlobal.style.marginLeft = "12px";
     btnPivotGlobal.style.fontWeight = "500";
-    btnPivotGlobal.innerHTML = "🗂️ Agrupar árbol por fuentes";
+    btnPivotGlobal.innerHTML = "🗂️ Agrupar";
     btnPivotGlobal.title = "Agrupar todo el árbol de códigos bajo sus respectivas fuentes";
     btnPivotGlobal.onclick = (e) => {
         e.preventDefault();
         arbolPivotado = !arbolPivotado;
         if (arbolPivotado) {
-            btnPivotGlobal.innerHTML = "📋 Restaurar estructura original";
+            btnPivotGlobal.innerHTML = "📋 Restaurar";
             btnPivotGlobal.style.backgroundColor = "var(--sol-blue)";
             btnPivotGlobal.style.color = "white";
             
@@ -2228,7 +2471,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             }
             renderTabCodebook(false);
         } else {
-            btnPivotGlobal.innerHTML = "🗂️ Agrupar árbol por fuentes";
+            btnPivotGlobal.innerHTML = "🗂️ Agrupar";
             btnPivotGlobal.style.backgroundColor = "";
             btnPivotGlobal.style.color = "";
             
@@ -2238,22 +2481,61 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             renderTabCodebook(false);
         }
     };
-    toolbarCodebookLeft.appendChild(btnPivotGlobal);
-    toolbarCodebookLeft.appendChild(lblPivotLevel);
-    toolbarCodebookLeft.appendChild(selectPivotLevel);
 
-    toolbarCodebook.appendChild(toolbarCodebookLeft);
-    
+    const btnToggleSearchCodebook = document.createElement("button");
+    btnToggleSearchCodebook.className = "cuali-btn-tool";
+    btnToggleSearchCodebook.innerText = "🔍";
+    btnToggleSearchCodebook.title = "Mostrar / Ocultar Buscador";
+    btnToggleSearchCodebook.onclick = (e) => {
+        e.preventDefault();
+        searchCodebookInput.style.display = searchCodebookInput.style.display === "none" ? "block" : "none";
+        if (searchCodebookInput.style.display === "block") searchCodebookInput.focus();
+    };
+
     const btnRefreshCodebook = document.createElement("button");
     btnRefreshCodebook.className = "cuali-btn-tool";
-    btnRefreshCodebook.innerText = "🔄 Refrescar Listas";
+    btnRefreshCodebook.innerText = "🔄";
+    btnRefreshCodebook.title = "Refrescar Listas";
     btnRefreshCodebook.onclick = btnRefreshCasos.onclick;
-    toolbarCodebook.appendChild(btnRefreshCodebook);
+
+    controlsCodebook.appendChild(btnGestionarCodebook);
+    controlsCodebook.appendChild(btnPivotGlobal);
+    controlsCodebook.appendChild(smartGroupingContainer);
+    controlsCodebook.appendChild(lblPivotLevel);
+    controlsCodebook.appendChild(selectPivotLevel);
+    
+    const sepCB1 = document.createElement("div");
+    sepCB1.className = "cuali-toolbar-separator";
+    controlsCodebook.appendChild(sepCB1);
+    
+    controlsCodebook.appendChild(btnToggleSearchCodebook);
+    
+    const sepCB2 = document.createElement("div");
+    sepCB2.className = "cuali-toolbar-separator";
+    controlsCodebook.appendChild(sepCB2);
+    
+    controlsCodebook.appendChild(btnExpandCodebook);
+    controlsCodebook.appendChild(btnCollapseCodebook);
+    
+    const sepCB3 = document.createElement("div");
+    sepCB3.className = "cuali-toolbar-separator";
+    controlsCodebook.appendChild(sepCB3);
+    
+    controlsCodebook.appendChild(btnCodebookSelectAll);
+    controlsCodebook.appendChild(btnCodebookDeselectAll);
+    controlsCodebook.appendChild(btnCodebookSelectFiltered);
+    
+    const sepCB4 = document.createElement("div");
+    sepCB4.className = "cuali-toolbar-separator";
+    controlsCodebook.appendChild(sepCB4);
+    
+    controlsCodebook.appendChild(btnRefreshCodebook);
     
     const searchCodebookInput = document.createElement("input");
     searchCodebookInput.type = "text";
     searchCodebookInput.className = "cuali-search-input";
     searchCodebookInput.placeholder = "🔍 Filtrar codebook por nombre o nivel jerárquico...";
+    searchCodebookInput.style.display = "none";
 
     const tableHeaderCodebook = document.createElement("div");
     tableHeaderCodebook.className = "cuali-table-header";
@@ -2274,11 +2556,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     infoNoteCodebook.className = "cn-info-note";
     infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code>, <code>cod/</code> y <code>memo/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>entrevistadx/.../transcripción/a analizar</code>).</em>`;
 
-    tabCodebook.appendChild(toolbarCodebook);
-    tabCodebook.appendChild(infoNoteCodebook);
     tabCodebook.appendChild(searchCodebookInput);
     tabCodebook.appendChild(tableHeaderCodebook);
     tabCodebook.appendChild(listCodebookContainer);
+    tabCodebook.appendChild(infoNoteCodebook);
 
     const codebookButtons = document.createElement("div");
     codebookButtons.className = "cuali-buttons";
@@ -2295,7 +2576,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             mostrarNotificacion("Selecciona al menos un código.");
             return;
         }
-        const clipboardText = generarTextoPortapapeles(codebookTreeRoot);
+        const clipboardText = generarTextoPortapapeles(codebookTreeRoot, 0, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
         try {
             await navigator.clipboard.writeText(clipboardText.trim());
             mostrarNotificacion("Códigos copiados en formato árbol.");
@@ -2318,11 +2599,14 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol("Codebook Global", codebookTreeRoot);
+        await generarPaginaConsolidadaArbol("Codebook Global", codebookTreeRoot, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
     };
 
     codebookButtons.appendChild(btnCodebookClipboard);
     codebookButtons.appendChild(btnCodebookPage);
+    
+    const configSectionCodebook = crearSeccionConfiguracionExportacion();
+    tabCodebook.appendChild(configSectionCodebook);
     tabCodebook.appendChild(codebookButtons);
 
     function renderTabCodebook(rebuild = true) {
@@ -2410,9 +2694,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     // Tabs Logic
     const tabs = [
-        { btn: btnTabExportacion, content: tabExportacion },
-        { btn: btnTabCasos, content: tabCasos },
-        { btn: btnTabCodebook, content: tabCodebook }
+        { btn: btnTabExportacion, content: tabExportacion, controls: controlsExport },
+        { btn: btnTabCasos, content: tabCasos, controls: controlsCasos },
+        { btn: btnTabCodebook, content: tabCodebook, controls: controlsCodebook }
     ];
 
     tabs.forEach(tab => {
@@ -2421,9 +2705,11 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             tabs.forEach(t => {
                 t.btn.classList.remove("active");
                 t.content.classList.remove("active");
+                t.controls.style.display = "none";
             });
             tab.btn.classList.add("active");
             tab.content.classList.add("active");
+            tab.controls.style.display = "flex";
         };
     });
 }
