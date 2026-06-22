@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.7.0 - Last Updated: 2026-06-06 01:03:03
+﻿// CualiNemesis v0.9.0 - Last Updated: 2026-06-22 01:53:19
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -310,6 +310,51 @@ function obtenerUIDPaginaPorTitulo(titulo) {
 function eliminarPaginaRoam(uidPagina) {
     return window.roamAlphaAPI.deletePage({page: {uid: uidPagina}});
 }
+
+function obtenerContenidoMemos(memoTitles) {
+    const map = {};
+    if (!memoTitles || memoTitles.length === 0) return map;
+    
+    const codePattern = /\[\[((?:dom|dim|cat|cod)\/[^\]]+)\]\]/g;
+    
+    memoTitles.forEach(title => {
+        const uid = obtenerUIDPaginaPorTitulo(title);
+        if (!uid) {
+            map[title] = { preview: "(Sin contenido)", linkedCodes: [] };
+            return;
+        }
+        
+        const bloques = obtenerBloquesDePagina(uid);
+        if (!bloques || bloques.length === 0) {
+            map[title] = { preview: "(Sin contenido)", linkedCodes: [] };
+            return;
+        }
+        
+        const nonHtmlBlocks = bloques
+            .map(b => b[1] ? b[1].trim() : "")
+            .filter(str => str.length > 0);
+            
+        const previewText = nonHtmlBlocks.slice(0, 3).join(" | ");
+        
+        const linkedCodesSet = new Set();
+        bloques.forEach(b => {
+            const str = b[1] || "";
+            let match;
+            codePattern.lastIndex = 0;
+            while ((match = codePattern.exec(str)) !== null) {
+                linkedCodesSet.add(match[1]);
+            }
+        });
+        
+        map[title] = {
+            preview: previewText.length > 120 ? previewText.substring(0, 120) + "..." : previewText || "(Sin contenido)",
+            linkedCodes: Array.from(linkedCodesSet).sort()
+        };
+    });
+    
+    return map;
+}
+
 
 
 
@@ -1337,6 +1382,155 @@ function renderCodebookNodeHTML(node) {
     return li;
 }
 
+function renderMemoNodeHTML(node, memoContentMap) {
+    const li = document.createElement("li");
+    li.style.listStyleType = "none";
+    li.style.margin = "0px 0";
+
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "node-header";
+    headerDiv.style.display = "flex";
+    headerDiv.style.alignItems = "center";
+    headerDiv.style.padding = "4px 12px";
+    headerDiv.style.transition = "background-color 0.15s ease";
+
+    const hasChildren = Object.keys(node.children).length > 0;
+
+    // Columna 1: Memo (jerárquico)
+    const colMemoDiv = document.createElement("div");
+    colMemoDiv.className = "col-memo";
+    colMemoDiv.style.display = "flex";
+    colMemoDiv.style.alignItems = "center";
+
+    if (hasChildren) {
+        const toggleIcon = document.createElement("span");
+        toggleIcon.className = "tree-toggle";
+        toggleIcon.innerText = "▶ ";
+        toggleIcon.style.cursor = "pointer";
+        toggleIcon.style.marginRight = "4px";
+        toggleIcon.style.fontFamily = "monospace";
+        toggleIcon.style.fontSize = "12px";
+        toggleIcon.style.color = "var(--sol-base1)";
+        toggleIcon.style.width = "14px";
+        toggleIcon.style.display = "inline-block";
+        toggleIcon.style.textAlign = "center";
+        
+        toggleIcon.onclick = () => {
+            const childUl = li.querySelector("ul");
+            if (childUl) {
+                if (childUl.style.display === "none") {
+                    childUl.style.display = "block";
+                    toggleIcon.innerText = "▼ ";
+                } else {
+                    childUl.style.display = "none";
+                    toggleIcon.innerText = "▶ ";
+                }
+            }
+        };
+        colMemoDiv.appendChild(toggleIcon);
+    } else {
+        const spacer = document.createElement("span");
+        spacer.style.display = "inline-block";
+        spacer.style.width = "14px";
+        colMemoDiv.appendChild(spacer);
+    }
+
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "node-label";
+    labelSpan.innerText = node.name;
+    labelSpan.style.fontSize = "14px";
+    labelSpan.style.color = "var(--sol-base01)";
+    colMemoDiv.appendChild(labelSpan);
+
+    const memoData = memoContentMap[node.fullName];
+    if (memoData) {
+        const goBtn = document.createElement("button");
+        goBtn.className = "cuali-btn-tool cuali-go-btn";
+        goBtn.style.padding = "2px 6px";
+        goBtn.style.fontSize = "11px";
+        goBtn.style.marginLeft = "8px";
+        goBtn.innerText = "↗";
+        goBtn.title = `Ir a [[${node.fullName}]]`;
+        goBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const overlay = document.getElementById("extractor-cualitativo-overlay");
+            if (overlay) {
+                document.body.removeChild(overlay);
+            }
+            abrirPaginaPorTitulo(node.fullName);
+        };
+        colMemoDiv.appendChild(goBtn);
+    }
+
+    headerDiv.appendChild(colMemoDiv);
+
+    // Columna 2: Preview
+    const colPreviewDiv = document.createElement("div");
+    colPreviewDiv.className = "col-preview";
+    colPreviewDiv.style.display = "flex";
+    colPreviewDiv.style.alignItems = "center";
+    
+    if (memoData && memoData.preview) {
+        const previewSpan = document.createElement("span");
+        previewSpan.className = "memo-preview-text";
+        previewSpan.innerText = memoData.preview;
+        previewSpan.title = memoData.preview;
+        colPreviewDiv.appendChild(previewSpan);
+    }
+    headerDiv.appendChild(colPreviewDiv);
+
+    // Columna 3: Vínculos (badges)
+    const colLinksDiv = document.createElement("div");
+    colLinksDiv.className = "col-links";
+    colLinksDiv.style.display = "flex";
+    colLinksDiv.style.alignItems = "center";
+
+    if (memoData && memoData.linkedCodes && memoData.linkedCodes.length > 0) {
+        const badgesContainer = document.createElement("div");
+        badgesContainer.className = "memo-badge-container";
+        
+        memoData.linkedCodes.forEach(codeTitle => {
+            const badge = document.createElement("span");
+            badge.className = "memo-badge";
+            badge.innerText = codeTitle.replace(/^(?:dom|dim|cat|cod)\//i, "");
+            badge.title = `Ir a [[${codeTitle}]]`;
+            badge.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const overlay = document.getElementById("extractor-cualitativo-overlay");
+                if (overlay) {
+                    document.body.removeChild(overlay);
+                }
+                abrirPaginaPorTitulo(codeTitle);
+            };
+            badgesContainer.appendChild(badge);
+        });
+        colLinksDiv.appendChild(badgesContainer);
+    }
+    headerDiv.appendChild(colLinksDiv);
+
+    li.appendChild(headerDiv);
+
+    if (hasChildren) {
+        const ul = document.createElement("ul");
+        ul.style.paddingLeft = "20px";
+        ul.style.borderLeft = "1px solid rgba(147, 161, 161, 0.3)";
+        ul.style.marginLeft = "6px";
+        ul.style.marginTop = "2px";
+        ul.style.marginBottom = "2px";
+        ul.style.display = "none";
+        
+        const childNamesSorted = Object.keys(node.children).sort();
+        childNamesSorted.forEach(childName => {
+            ul.appendChild(renderMemoNodeHTML(node.children[childName], memoContentMap));
+        });
+        li.appendChild(ul);
+    }
+
+    return li;
+}
+
 function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
@@ -2199,6 +2393,58 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             width: 0%;
             transition: width 0.1s ease;
         }
+        
+        /* Estilos Pestaña Memos */
+        .col-memo {
+            flex: 2;
+            min-width: 250px;
+        }
+        .col-preview {
+            flex: 3;
+            min-width: 300px;
+            padding-left: 12px;
+            padding-right: 12px;
+            border-right: 1px solid rgba(147, 161, 161, 0.15);
+            border-left: 1px solid rgba(147, 161, 161, 0.15);
+            box-sizing: border-box;
+        }
+        .col-links {
+            flex: 2;
+            min-width: 200px;
+            padding-left: 12px;
+            box-sizing: border-box;
+        }
+        .memo-preview-text {
+            font-size: 12px;
+            color: var(--sol-base1);
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 450px;
+        }
+        .memo-badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            max-height: 40px;
+            overflow-y: auto;
+        }
+        .memo-badge {
+            background-color: rgba(38, 139, 210, 0.08);
+            color: var(--sol-blue);
+            border: 1px solid rgba(38, 139, 210, 0.2);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .memo-badge:hover {
+            background-color: var(--sol-blue);
+            color: #ffffff;
+        }
     `;
     document.head.appendChild(styleTag);
 
@@ -2345,9 +2591,14 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnTabCodebook.className = "cuali-tab-btn";
     btnTabCodebook.innerText = "Codificación";
     
+    const btnTabMemos = document.createElement("button");
+    btnTabMemos.className = "cuali-tab-btn";
+    btnTabMemos.innerText = "Memos";
+    
     tabsLeft.appendChild(btnTabExportacion);
     tabsLeft.appendChild(btnTabCasos);
     tabsLeft.appendChild(btnTabCodebook);
+    tabsLeft.appendChild(btnTabMemos);
     tabsNav.appendChild(tabsLeft);
 
     const controlsExport = document.createElement("div");
@@ -2360,9 +2611,13 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const controlsCodebook = document.createElement("div");
     controlsCodebook.className = "cuali-tabs-right";
 
+    const controlsMemos = document.createElement("div");
+    controlsMemos.className = "cuali-tabs-right";
+
     tabsNav.appendChild(controlsExport);
     tabsNav.appendChild(controlsCasos);
     tabsNav.appendChild(controlsCodebook);
+    tabsNav.appendChild(controlsMemos);
     
     modal.appendChild(tabsNav);
 
@@ -2375,6 +2630,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     
     const tabCodebook = document.createElement("div");
     tabCodebook.className = "cuali-tab-content";
+
+    const tabMemos = document.createElement("div");
+    tabMemos.className = "cuali-tab-content";
 
     // --- POPULATE TAB: EXPORTACION ---
     const btnExpandAll = document.createElement("button");
@@ -2834,7 +3092,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         
         const cb = obtenerCodebookGlobal();
         const todosLosTitulos = [];
-        ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
+        ["dom", "dim", "cat", "cod"].forEach(key => {
             todosLosTitulos.push(...cb[key]);
         });
         const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
@@ -3172,7 +3430,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const infoNoteCodebook = document.createElement("div");
     infoNoteCodebook.className = "cn-info-note";
-    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code>, <code>cod/</code> y <code>memo/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>entrevistadx/.../transcripción/a analizar</code>).</em>`;
+    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>entrevistadx/.../transcripción/a analizar</code>).</em>`;
 
     tabCodebook.appendChild(searchCodebookInput);
     tabCodebook.appendChild(tableHeaderCodebook);
@@ -3227,13 +3485,116 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabCodebook.appendChild(configSectionCodebook);
     tabCodebook.appendChild(codebookButtons);
 
+    // --- POPULATE TAB: MEMOS ---
+    const btnExpandMemos = document.createElement("button");
+    btnExpandMemos.className = "cuali-btn-tool";
+    btnExpandMemos.innerText = "⊞";
+    btnExpandMemos.title = "Expandir todo";
+    btnExpandMemos.onclick = (e) => {
+        e.preventDefault();
+        const uls = listMemosContainer.querySelectorAll("ul");
+        uls.forEach(ul => ul.style.display = "block");
+        const toggles = listMemosContainer.querySelectorAll(".tree-toggle");
+        toggles.forEach(toggle => toggle.innerText = "▼ ");
+    };
+
+    const btnCollapseMemos = document.createElement("button");
+    btnCollapseMemos.className = "cuali-btn-tool";
+    btnCollapseMemos.innerText = "⊟";
+    btnCollapseMemos.title = "Colapsar todo";
+    btnCollapseMemos.onclick = (e) => {
+        e.preventDefault();
+        const uls = listMemosContainer.querySelectorAll("ul");
+        uls.forEach(ul => {
+            if (ul !== listMemosContainer.querySelector("ul")) {
+                ul.style.display = "none";
+            }
+        });
+        const toggles = listMemosContainer.querySelectorAll(".tree-toggle");
+        toggles.forEach(toggle => toggle.innerText = "▶ ");
+    };
+
+    const btnToggleSearchMemos = document.createElement("button");
+    btnToggleSearchMemos.className = "cuali-btn-tool";
+    btnToggleSearchMemos.innerText = "🔍";
+    btnToggleSearchMemos.title = "Buscar memo";
+    btnToggleSearchMemos.onclick = (e) => {
+        e.preventDefault();
+        if (searchMemosInput.style.display === "none") {
+            searchMemosInput.style.display = "block";
+            btnToggleSearchMemos.classList.add("active");
+            searchMemosInput.focus();
+        } else {
+            searchMemosInput.style.display = "none";
+            searchMemosInput.value = "";
+            filtrarArbolDOM(listMemosContainer, "");
+            btnToggleSearchMemos.classList.remove("active");
+        }
+    };
+
+    const btnRefreshMemos = document.createElement("button");
+    btnRefreshMemos.className = "cuali-btn-tool";
+    btnRefreshMemos.innerText = "🔄";
+    btnRefreshMemos.title = "Refrescar Memos";
+    btnRefreshMemos.onclick = (e) => {
+        e.preventDefault();
+        refrescarCachesGlobales();
+        renderTabMemos();
+    };
+
+    controlsMemos.appendChild(btnExpandMemos);
+    controlsMemos.appendChild(btnCollapseMemos);
+    
+    const sepM1 = document.createElement("div");
+    sepM1.className = "cuali-toolbar-separator";
+    controlsMemos.appendChild(sepM1);
+    
+    controlsMemos.appendChild(btnToggleSearchMemos);
+    
+    const sepM2 = document.createElement("div");
+    sepM2.className = "cuali-toolbar-separator";
+    controlsMemos.appendChild(sepM2);
+    
+    controlsMemos.appendChild(btnRefreshMemos);
+
+    const searchMemosInput = document.createElement("input");
+    searchMemosInput.type = "text";
+    searchMemosInput.className = "cuali-search-input";
+    searchMemosInput.placeholder = "🔍 Filtrar memos por nombre o nivel jerárquico...";
+    searchMemosInput.style.display = "none";
+    searchMemosInput.oninput = () => {
+        filtrarArbolDOM(listMemosContainer, searchMemosInput.value);
+    };
+
+    const tableHeaderMemos = document.createElement("div");
+    tableHeaderMemos.className = "cuali-table-header";
+    tableHeaderMemos.innerHTML = `
+        <div class="col-header col-memo" style="padding-right: 12px; box-sizing: border-box;">Memo</div>
+        <div class="col-header col-preview" style="padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Preview</div>
+        <div class="col-header col-links" style="padding-left: 12px; box-sizing: border-box;">Códigos Vinculados</div>
+    `;
+
+    const listMemosContainer = document.createElement("div");
+    listMemosContainer.className = "cuali-list-box cuali-tree-container";
+
+    const infoNoteMemos = document.createElement("div");
+    infoNoteMemos.className = "cn-info-note";
+    infoNoteMemos.innerHTML = `ℹ️ <em>Memos del investigador (<code>memo/</code>). Las reflexiones se organizan por su jerarquía de namespace. El preview muestra los primeros bloques de texto y vincula códigos referenciados.</em>`;
+
+    tabMemos.appendChild(searchMemosInput);
+    tabMemos.appendChild(tableHeaderMemos);
+    tabMemos.appendChild(listMemosContainer);
+    tabMemos.appendChild(infoNoteMemos);
+
+    let memosTreeRoot = null;
+
     function renderTabCodebook(rebuild = true) {
         listCodebookContainer.innerHTML = "";
         
         if (rebuild || !codebookTreeRoot) {
             const cb = obtenerCodebookGlobal();
             const todosLosTitulos = [];
-            ["dom", "dim", "cat", "cod", "memo"].forEach(key => {
+            ["dom", "dim", "cat", "cod"].forEach(key => {
                 todosLosTitulos.push(...cb[key]);
             });
             const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
@@ -3283,13 +3644,53 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         }
     }
 
+    function renderTabMemos() {
+        listMemosContainer.innerHTML = "";
+        
+        const cb = obtenerCodebookGlobal();
+        const memoTitles = cb["memo"] || [];
+        
+        if (memoTitles.length === 0) {
+            listMemosContainer.innerHTML = "<li style='color: var(--sol-base1); padding: 10px; list-style-type: none;'>No hay memos en el codebook.</li>";
+            return;
+        }
+
+        const memoContentMap = obtenerContenidoMemos(memoTitles);
+        
+        const dummyMap = {};
+        memoTitles.forEach(t => dummyMap[t] = []);
+        
+        memosTreeRoot = construirArbolCodigos(dummyMap);
+        
+        const rootUl = document.createElement("ul");
+        rootUl.style.paddingLeft = "0";
+        rootUl.style.margin = "0";
+        
+        if (memosTreeRoot && Object.keys(memosTreeRoot.children).length > 0) {
+            const childNamesSorted = Object.keys(memosTreeRoot.children).sort();
+            childNamesSorted.forEach(childName => {
+                rootUl.appendChild(renderMemoNodeHTML(memosTreeRoot.children[childName], memoContentMap));
+            });
+        } else {
+            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px; list-style-type: none;'>No hay memos en el codebook.</li>";
+        }
+        
+        listMemosContainer.appendChild(rootUl);
+        
+        if (searchMemosInput.value) {
+            filtrarArbolDOM(listMemosContainer, searchMemosInput.value);
+        }
+    }
+
     // Initial Render of Global Tabs
     renderTabCasos();
     renderTabCodebook();
+    renderTabMemos();
 
     modal.appendChild(tabExportacion);
     modal.appendChild(tabCasos);
     modal.appendChild(tabCodebook);
+    modal.appendChild(tabMemos);
 
     // Cancel Button at the very bottom (global for the modal)
     const globalFooter = document.createElement("div");
@@ -3314,7 +3715,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const tabs = [
         { btn: btnTabExportacion, content: tabExportacion, controls: controlsExport },
         { btn: btnTabCasos, content: tabCasos, controls: controlsCasos },
-        { btn: btnTabCodebook, content: tabCodebook, controls: controlsCodebook }
+        { btn: btnTabCodebook, content: tabCodebook, controls: controlsCodebook },
+        { btn: btnTabMemos, content: tabMemos, controls: controlsMemos }
     ];
 
     tabs.forEach(tab => {

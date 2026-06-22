@@ -34,7 +34,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * Buscador integrado en tiempo real para filtrar casos y códigos simultáneamente.
 
 ### 3. 🗺️ Codificación (Codebook Global)
-* Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`), Códigos (`cod/`) y Memos (`memo/`).
+* Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`) y Códigos (`cod/`).
 * Renderiza el Codebook global en una estructura de tabla de árbol (TreeTable) interactiva con checkboxes en cascada y tres columnas: **Código**, **Citas** (cantidad total de citas asociadas) y **Fuentes** (entrevistados vinculados).
 * **Pivote Híbrido por Fuentes (v0.7.0):**
   * **Selector de Nivel Global:** Permite agrupar el árbol cualitativo completo por fuentes a una profundidad específica (`Nivel 1`, `Nivel 2`, `Nivel 3`, `Nivel 4`) o de forma inteligente recursiva (`Automático`).
@@ -51,8 +51,18 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Navegación Rápida:** Botón discreto `↗️` en cada nodo (visible en hover) para ir a la página de ese código directamente.
 * **Filtro Inteligente de Descendientes:** Al buscar un código en el Codebook, la interfaz no solo muestra los ancestros (para dar contexto jerárquico), sino que **muestra y expande automáticamente todos sus descendientes**.
 
-### 4. 🗑️ Gestión y Eliminación de Categorías (Auditable)
-* Permite desenlazar o eliminar las categorías cualitativas seleccionadas directamente desde la interfaz en cualquiera de las 3 pestañas.
+### 4. 📝 Memos (Reflexiones del Investigador) (v0.9.0)
+* **Separación Conceptual:** Aísla el namespace `memo/` en su propia pestaña dedicada, retirándolos de las pestañas de codificación analítica para mantener flujos metodológicos limpios.
+* **Renderizado Jerárquico:** Muestra la estructura jerárquica organizativa de los memos (por ejemplo: `memo/caso`, `memo/dimensiones`, etc.) en un árbol interactivo.
+* **Preview en Tiempo Real:** Visualiza directamente los primeros bloques de texto de la página del memo, permitiendo leer reflexiones conceptuales sin salir del panel.
+* **Mapeo de Códigos Vinculados:** Detecta referencias a códigos cualitativos (`[[cod/...]]`, `[[dim/...]]`, etc.) en el texto del memo y las renderiza como etiquetas (badges) compactos e interactivos en una columna dedicada.
+* **Navegación Interactiva:** 
+  - El botón `↗` en la fila del memo navega instantáneamente a su página de reflexiones y cierra el modal.
+  - Al hacer clic en cualquier badge de código vinculado, el modal se cierra y te posiciona directamente en la página de dicho código en Roam.
+* **Toolbar Simplificada:** Controles contextuales para expandir/colapsar el árbol de memos, buscador interactivo integrado y botón de actualización de caché.
+
+### 5. 🗑️ Gestión y Eliminación de Categorías (Auditable)
+* Permite desenlazar o eliminar las categorías cualitativas seleccionadas directamente desde la interfaz en cualquiera de las pestañas.
 * **Modo Desenlazar**: Remueve los corchetes `[[  ]]` de las referencias, convirtiéndolas en texto plano (ej: `[[cod/afect]]` → `cod/afect`).
 * **Modo Eliminar (Auditable)**: Reemplaza las referencias seleccionadas con la etiqueta de página `[[CÓDIGO ELIMINADO]]`. Esto conserva la estructura de texto íntegra de la entrevista original y te permite usar los backlinks nativos de Roam sobre la página `[[CÓDIGO ELIMINADO]]` para auditar exactamente qué codificaciones fueron removidas y en qué bloques.
 * **Borrado de Páginas**: Opción de eliminar la página correspondiente en el grafo de Roam para cada código borrado.

@@ -286,5 +286,50 @@ function eliminarPaginaRoam(uidPagina) {
     return window.roamAlphaAPI.deletePage({page: {uid: uidPagina}});
 }
 
+function obtenerContenidoMemos(memoTitles) {
+    const map = {};
+    if (!memoTitles || memoTitles.length === 0) return map;
+    
+    const codePattern = /\[\[((?:dom|dim|cat|cod)\/[^\]]+)\]\]/g;
+    
+    memoTitles.forEach(title => {
+        const uid = obtenerUIDPaginaPorTitulo(title);
+        if (!uid) {
+            map[title] = { preview: "(Sin contenido)", linkedCodes: [] };
+            return;
+        }
+        
+        const bloques = obtenerBloquesDePagina(uid);
+        if (!bloques || bloques.length === 0) {
+            map[title] = { preview: "(Sin contenido)", linkedCodes: [] };
+            return;
+        }
+        
+        const nonHtmlBlocks = bloques
+            .map(b => b[1] ? b[1].trim() : "")
+            .filter(str => str.length > 0);
+            
+        const previewText = nonHtmlBlocks.slice(0, 3).join(" | ");
+        
+        const linkedCodesSet = new Set();
+        bloques.forEach(b => {
+            const str = b[1] || "";
+            let match;
+            codePattern.lastIndex = 0;
+            while ((match = codePattern.exec(str)) !== null) {
+                linkedCodesSet.add(match[1]);
+            }
+        });
+        
+        map[title] = {
+            preview: previewText.length > 120 ? previewText.substring(0, 120) + "..." : previewText || "(Sin contenido)",
+            linkedCodes: Array.from(linkedCodesSet).sort()
+        };
+    });
+    
+    return map;
+}
+
+
 
 

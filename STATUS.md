@@ -1,8 +1,9 @@
 # Estado del Proyecto (STATUS)
-
-## Fase Actual: Mantenimiento y Refinamiento Estético (V 0.8.1)
-
+ 
+## Fase Actual: Pestaña de Memos Dedicada (V 0.9.0)
+ 
 ### Completado
+- [x] **Pestaña de Memos Dedicada (v0.9.0):** Separación conceptual completa del namespace `memo/` de la pestaña de Codificación y Casos. Añadida la pestaña "Memos" que presenta los memos jerárquicamente, muestra un preview de texto de los primeros bloques y badges interactivos para los códigos cualitativos vinculados, facilitando la navegación cruzada.
 - [x] **Fusión de Pestañas y Controles (v0.8.1):** Rediseño total de la zona superior del modal. Se unificaron las pestañas de navegación (izquierda) y la barra de herramientas (derecha) en una sola fila horizontal (`cuali-tabs`). Los controles se alternan dinámicamente según la pestaña seleccionada. El buscador se despliega debajo de esta única fila solo cuando se activa (botón 🔍), maximizando el espacio de visualización útil vertical para las tablas de datos.
 - [x] **Gestión y Eliminación de Categorías (v0.8.0):** Implementado el botón `🗑️ Gestionar` en las tres pestañas. Añadido un modal de confirmación con impacto detallado. Soporta dos modos: "Desenlazar" (quitar corchetes `[[  ]]`) y "Eliminar" (reemplazar por el enlace auditable `[[CÓDIGO ELIMINADO]]` para preservar la integridad de la entrevista y rastrear eliminaciones vía backlinks). Opcionalmente borra las páginas correspondientes en Roam. Ejecución secuencial espaciada para rate limiting con barra de progreso.
 - [x] **Notas de Origen de Datos (v0.8.0):** Agregada una nota descriptiva sutil `.cn-info-note` debajo de la barra de herramientas de cada pestaña detallando la procedencia exacta de la información y criterios de filtrado.
