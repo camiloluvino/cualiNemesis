@@ -123,6 +123,7 @@ async function generarPaginaConsolidadaArbol(originalTitle, rootNode, numAbove =
 
 let cacheCasos = null;
 let cacheCodebook = null;
+let cacheCategorias = null;
 
 function obtenerCasosGlobal() {
     if (cacheCasos) return cacheCasos;
@@ -177,8 +178,10 @@ function obtenerCodebookGlobal() {
 function refrescarCachesGlobales() {
     cacheCasos = null;
     cacheCodebook = null;
+    cacheCategorias = null;
     obtenerCasosGlobal();
     obtenerCodebookGlobal();
+    leerCategoriasDesdeRoam();
 }
 
 function obtenerReferenciasDeCodigos(titulos) {
@@ -328,6 +331,179 @@ function obtenerContenidoMemos(memoTitles) {
     });
     
     return map;
+}
+
+function leerCategoriasDesdeRoam() {
+    if (cacheCategorias) return cacheCategorias;
+    
+    const res = window.roamAlphaAPI.q(`[:find ?uid ?title :where [?p :node/title ?title] [?p :block/uid ?uid]]`) || [];
+    const catPages = res.filter(r => r[1] && r[1].startsWith("categoría/"));
+    
+    const map = {};
+    catPages.forEach(r => {
+        const pageUid = r[0];
+        const fullTitle = r[1];
+        const catName = fullTitle.substring("categoría/".length);
+        
+        const blocks = window.roamAlphaAPI.q(`
+            [:find ?bstr ?buid
+             :in $ ?pageUid
+             :where
+             [?page :block/uid ?pageUid]
+             [?page :block/children ?b]
+             [?b :block/string ?bstr]
+             [?b :block/uid ?buid]
+            ]
+        `, pageUid) || [];
+        
+        const codes = [];
+        const codeUids = {};
+        
+        blocks.forEach(b => {
+            const bstr = b[0] || "";
+            const buid = b[1];
+            
+            const str = bstr.trim();
+            let codeTitle = null;
+            if (str.startsWith("[[") && str.endsWith("]]")) {
+                const inner = str.slice(2, -2);
+                if (inner.startsWith("cod/")) {
+                    codeTitle = inner;
+                }
+            } else if (str.startsWith("cod/")) {
+                codeTitle = str;
+            }
+            
+            if (codeTitle) {
+                if (!codes.includes(codeTitle)) {
+                    codes.push(codeTitle);
+                }
+                codeUids[codeTitle] = buid;
+            }
+        });
+        
+        map[catName] = {
+            uid: pageUid,
+            codes: codes,
+            codeUids: codeUids
+        };
+    });
+    
+    cacheCategorias = map;
+    return cacheCategorias;
+}
+
+async function crearCategoriaRoam(nombre) {
+    if (!nombre || !nombre.trim()) return;
+    const pageTitle = "categoría/" + nombre.trim();
+    
+    let pageUid = obtenerUIDPaginaPorTitulo(pageTitle);
+    if (!pageUid) {
+        pageUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createPage({page: {title: pageTitle, uid: pageUid}});
+        await sleep(100);
+    }
+    cacheCategorias = null;
+    return pageUid;
+}
+
+async function eliminarCategoriaRoam(uid) {
+    if (!uid) return;
+    window.roamAlphaAPI.deletePage({page: {uid: uid}});
+    await sleep(100);
+    cacheCategorias = null;
+}
+
+async function actualizarCodigosCategoriaRoam(pageUid, codigosDeseados) {
+    if (!pageUid) return;
+    
+    const blocks = window.roamAlphaAPI.q(`
+        [:find ?buid ?bstr
+         :in $ ?pageUid
+         :where
+         [?page :block/uid ?pageUid]
+         [?page :block/children ?b]
+         [?b :block/uid ?buid]
+         [?b :block/string ?bstr]
+        ]
+    `, pageUid) || [];
+    
+    const currentCodeToBlockUid = {};
+    blocks.forEach(b => {
+        const buid = b[0];
+        const bstr = b[1] || "";
+        const str = bstr.trim();
+        let codeTitle = null;
+        if (str.startsWith("[[") && str.endsWith("]]")) {
+            const inner = str.slice(2, -2);
+            if (inner.startsWith("cod/")) {
+                codeTitle = inner;
+            }
+        } else if (str.startsWith("cod/")) {
+            codeTitle = str;
+        }
+        
+        if (codeTitle) {
+            currentCodeToBlockUid[codeTitle] = buid;
+        }
+    });
+    
+    const currentCodes = Object.keys(currentCodeToBlockUid);
+    
+    const toDelete = currentCodes.filter(c => !codigosDeseados.includes(c));
+    for (const code of toDelete) {
+        const buid = currentCodeToBlockUid[code];
+        window.roamAlphaAPI.deleteBlock({block: {uid: buid}});
+        await sleep(50);
+    }
+    
+    const toAdd = codigosDeseados.filter(c => !currentCodes.includes(c));
+    let order = blocks.length;
+    for (const code of toAdd) {
+        const blockUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createBlock({
+            location: {"parent-uid": pageUid, order: order},
+            block: {string: `[[${code}]]`, uid: blockUid}
+        });
+        order++;
+        await sleep(50);
+    }
+    
+    cacheCategorias = null;
+}
+
+async function vincularCodigosACategoria(pageUid, codeNames) {
+    if (!pageUid || !codeNames || codeNames.length === 0) return;
+    
+    const currentCategories = leerCategoriasDesdeRoam();
+    let catInfo = null;
+    for (const info of Object.values(currentCategories)) {
+        if (info.uid === pageUid) {
+            catInfo = info;
+            break;
+        }
+    }
+    const currentCodes = catInfo ? (catInfo.codes || []) : [];
+    const updatedCodes = Array.from(new Set([...currentCodes, ...codeNames]));
+    
+    await actualizarCodigosCategoriaRoam(pageUid, updatedCodes);
+}
+
+async function desvincularCodigosDeCategoria(pageUid, codeNames) {
+    if (!pageUid || !codeNames || codeNames.length === 0) return;
+    
+    const currentCategories = leerCategoriasDesdeRoam();
+    let catInfo = null;
+    for (const info of Object.values(currentCategories)) {
+        if (info.uid === pageUid) {
+            catInfo = info;
+            break;
+        }
+    }
+    const currentCodes = catInfo ? (catInfo.codes || []) : [];
+    const updatedCodes = currentCodes.filter(c => !codeNames.includes(c));
+    
+    await actualizarCodigosCategoriaRoam(pageUid, updatedCodes);
 }
 
 

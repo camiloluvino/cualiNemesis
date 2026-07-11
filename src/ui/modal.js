@@ -45,11 +45,13 @@ function updateAncestorStates(checkbox) {
 
 function abrirPaginaPorTitulo(title) {
     const res = window.roamAlphaAPI.q(`[:find ?uid :in $ ?title :where [?p :node/title ?title] [?p :block/uid ?uid]]`, title);
-    if (res && res.length > 0) {
-        window.roamAlphaAPI.ui.mainWindow.openPage({page: {uid: res[0][0]}});
-    } else {
-        window.roamAlphaAPI.ui.mainWindow.openPage({page: {title: title}});
-    }
+    setTimeout(() => {
+        if (res && res.length > 0) {
+            window.roamAlphaAPI.ui.mainWindow.openPage({page: {uid: res[0][0]}});
+        } else {
+            window.roamAlphaAPI.ui.mainWindow.openPage({page: {title: title}});
+        }
+    }, 100);
 }
 
 function getAggregateCites(node) {
@@ -868,6 +870,256 @@ function renderMemoNodeHTML(node, memoContentMap) {
     return li;
 }
 
+function renderCategoryNodeHTML(node, depth = 0) {
+    const li = document.createElement("li");
+    li.style.listStyleType = "none";
+    li.style.margin = "0px 0";
+
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "node-row";
+    rowDiv.style.display = "flex";
+    rowDiv.style.alignItems = "center";
+    rowDiv.style.justifyContent = "space-between";
+    rowDiv.style.width = "100%";
+    rowDiv.style.padding = "4px 12px";
+    rowDiv.style.transition = "all 0.2s ease";
+    rowDiv.style.borderBottom = "1px solid var(--sol-base2)";
+
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "node-header col-cat-name";
+    headerDiv.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+    headerDiv.style.paddingRight = "12px";
+    headerDiv.style.boxSizing = "border-box";
+
+    const hasChildren = Object.keys(node.children).length > 0;
+    const isUncategorizedNode = node.fullName === "__sin_categorizar__";
+    let toggleIcon = null;
+
+    if (hasChildren) {
+        toggleIcon = document.createElement("span");
+        toggleIcon.className = "tree-toggle";
+        toggleIcon.innerText = "▶ ";
+        toggleIcon.style.cursor = "pointer";
+        toggleIcon.style.marginRight = "4px";
+        toggleIcon.style.fontFamily = "monospace";
+        toggleIcon.style.fontSize = "12px";
+        toggleIcon.style.color = "var(--sol-base1)";
+        toggleIcon.style.width = "14px";
+        toggleIcon.style.display = "inline-block";
+        toggleIcon.style.textAlign = "center";
+        
+        toggleIcon.onclick = () => {
+            const childUl = li.querySelector("ul");
+            if (childUl) {
+                if (childUl.style.display === "none") {
+                    childUl.style.display = "block";
+                    toggleIcon.innerText = "▼ ";
+                } else {
+                    childUl.style.display = "none";
+                    toggleIcon.innerText = "▶ ";
+                }
+            }
+        };
+        headerDiv.appendChild(toggleIcon);
+    } else {
+        const spacer = document.createElement("span");
+        spacer.style.display = "inline-block";
+        spacer.style.width = "14px";
+        headerDiv.appendChild(spacer);
+    }
+
+    let checkbox = null;
+    if (!isUncategorizedNode) {
+        checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = node.checked;
+        checkbox._node = node;
+        checkbox.style.marginRight = "8px";
+        checkbox.style.cursor = "pointer";
+        checkbox.style.flexShrink = "0";
+        checkbox.onchange = () => {
+            const isChecked = checkbox.checked;
+            checkbox.indeterminate = false;
+            
+            updateNodeCheckedState(node, isChecked);
+            updateDescendantCheckboxes(li, isChecked);
+            updateAncestorStates(checkbox);
+        };
+        headerDiv.appendChild(checkbox);
+    }
+
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "node-label";
+    labelSpan.innerText = node.name;
+    labelSpan.style.cursor = "pointer";
+    labelSpan.style.textOverflow = "ellipsis";
+    labelSpan.style.overflow = "hidden";
+    labelSpan.style.whiteSpace = "nowrap";
+    
+    if (depth === 0) {
+        labelSpan.style.fontWeight = "600";
+        labelSpan.style.fontSize = "14px";
+        labelSpan.style.color = "var(--sol-base01)";
+        rowDiv.classList.add("node-depth-0");
+        
+        if (isUncategorizedNode) {
+            rowDiv.style.fontStyle = "italic";
+            rowDiv.style.color = "var(--sol-base1)";
+        }
+    } else {
+        labelSpan.style.fontWeight = "400";
+        labelSpan.style.fontSize = "13px";
+        labelSpan.style.color = "var(--sol-base1)";
+    }
+    
+    if (checkbox) {
+        labelSpan.onclick = () => {
+            checkbox.click();
+        };
+    }
+
+    headerDiv.appendChild(labelSpan);
+
+    if (depth > 0) {
+        const goBtn = document.createElement("button");
+        goBtn.className = "cuali-btn-tool cuali-go-btn";
+        goBtn.style.padding = "2px 6px";
+        goBtn.style.fontSize = "11px";
+        goBtn.style.marginLeft = "auto";
+        goBtn.style.flexShrink = "0";
+        goBtn.innerText = "↗";
+        goBtn.title = `Ir a [[${node.fullName}]]`;
+        goBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const overlay = document.getElementById("extractor-cualitativo-overlay");
+            if (overlay) {
+                document.body.removeChild(overlay);
+            }
+            abrirPaginaPorTitulo(node.fullName);
+        };
+        headerDiv.appendChild(goBtn);
+    }
+
+    if (depth === 0 && !isUncategorizedNode) {
+        const goBtn = document.createElement("button");
+        goBtn.className = "cuali-btn-tool cuali-go-btn";
+        goBtn.style.padding = "2px 6px";
+        goBtn.style.fontSize = "11px";
+        goBtn.style.marginLeft = "auto";
+        goBtn.style.flexShrink = "0";
+        goBtn.innerText = "↗";
+        goBtn.title = `Ir a [[${node.fullName}]]`;
+        goBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const overlay = document.getElementById("extractor-cualitativo-overlay");
+            if (overlay) {
+                document.body.removeChild(overlay);
+            }
+            abrirPaginaPorTitulo(node.fullName);
+        };
+        headerDiv.appendChild(goBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "cuali-btn-tool cuali-go-btn";
+        deleteBtn.style.padding = "2px 6px";
+        deleteBtn.style.fontSize = "11px";
+        deleteBtn.style.marginLeft = "4px";
+        deleteBtn.style.flexShrink = "0";
+        deleteBtn.style.color = "var(--sol-red)";
+        deleteBtn.style.borderColor = "rgba(220, 50, 47, 0.2)";
+        deleteBtn.innerText = "🗑️";
+        deleteBtn.title = `Eliminar categoría: ${node.name}`;
+        deleteBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm(`¿Estás seguro de que deseas eliminar la categoría "${node.name}"? Esta acción eliminará la página de la categoría [[${node.fullName}]] en Roam, pero no borrará los códigos ni las citas.`)) {
+                await eliminarCategoriaRoam(node.uid);
+                mostrarNotificacion("Categoría eliminada.");
+                refrescarCachesGlobales();
+                renderTabCategorias();
+            }
+        };
+        headerDiv.appendChild(deleteBtn);
+    }
+
+    rowDiv.appendChild(headerDiv);
+
+    const totalCodes = depth === 0 && !isUncategorizedNode ? Object.keys(node.children).length : 0;
+    const totalCites = getAggregateCites(node);
+    const uniqueSources = Array.from(getAggregateSources(node)).sort();
+
+    const codesCol = document.createElement("div");
+    codesCol.className = "node-cat-codes-col";
+    codesCol.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+    codesCol.innerText = depth === 0 && !isUncategorizedNode ? totalCodes : "-";
+    rowDiv.appendChild(codesCol);
+
+    const citesCol = document.createElement("div");
+    citesCol.className = "node-cat-cites-col";
+    citesCol.style.borderRight = "1px solid rgba(147, 161, 161, 0.15)";
+    citesCol.innerText = totalCites > 0 ? totalCites : "-";
+    rowDiv.appendChild(citesCol);
+
+    const sourcesCol = document.createElement("div");
+    sourcesCol.className = "node-cat-sources-col";
+    
+    if (uniqueSources.length > 0 && (depth > 0 || (depth === 0 && !hasChildren))) {
+        const formattedSources = uniqueSources.map(s => {
+            if (s.startsWith("entrevistadx/")) {
+                const parts = s.split('/');
+                if (parts.length >= 2) return parts[1];
+            }
+            return s;
+        });
+        const uniqueFormatted = Array.from(new Set(formattedSources));
+        
+        const maxChipsToShow = 2;
+        const chipsToShow = uniqueFormatted.slice(0, maxChipsToShow);
+        const remaining = uniqueFormatted.length - maxChipsToShow;
+        
+        chipsToShow.forEach(sourceName => {
+            const chip = document.createElement("span");
+            chip.className = "cuali-tag";
+            chip.innerText = sourceName;
+            chip.title = sourceName;
+            sourcesCol.appendChild(chip);
+        });
+        
+        if (remaining > 0) {
+            const moreChip = document.createElement("span");
+            moreChip.className = "cuali-tag cuali-tag-more";
+            moreChip.innerText = `+${remaining} más`;
+            moreChip.title = uniqueFormatted.join(", ");
+            sourcesCol.appendChild(moreChip);
+        }
+    } else {
+        sourcesCol.innerText = "";
+    }
+    rowDiv.appendChild(sourcesCol);
+
+    li.appendChild(rowDiv);
+
+    if (hasChildren) {
+        const ul = document.createElement("ul");
+        ul.style.paddingLeft = "20px";
+        ul.style.borderLeft = "1px solid rgba(147, 161, 161, 0.3)";
+        ul.style.marginLeft = "6px";
+        ul.style.marginTop = "2px";
+        ul.style.marginBottom = "2px";
+        ul.style.display = "none";
+        
+        const childNamesSorted = Object.keys(node.children).sort();
+        childNamesSorted.forEach(childName => {
+            ul.appendChild(renderCategoryNodeHTML(node.children[childName], depth + 1));
+        });
+        li.appendChild(ul);
+    }
+
+    return li;
+}
+
 function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     const li = document.createElement("li");
     li.style.listStyleType = "none";
@@ -1113,8 +1365,15 @@ function filtrarArbolDOM(container, query) {
         return;
     }
     
+    // Identificamos los nodos de nivel superior (ej. Categorías raíz) para que sean "inmunes" y siempre se muestren
+    const topLevelLis = Array.from(container.querySelectorAll(':scope > ul > li'));
+    
     lis.forEach(li => {
-        li.style.display = "none";
+        if (topLevelLis.includes(li)) {
+            li.style.display = "";
+        } else {
+            li.style.display = "none";
+        }
     });
     
     lis.forEach(li => {
@@ -1782,6 +2041,79 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             background-color: var(--sol-blue);
             color: #ffffff;
         }
+        
+        /* Category-specific columns */
+        .col-cat-name { flex: 2; display: flex; align-items: center; min-width: 0; }
+        .col-cat-codes { flex: 0 0 100px; text-align: center; justify-content: center; }
+        .col-cat-cites { flex: 0 0 100px; text-align: center; justify-content: center; }
+        .col-cat-sources { flex: 1.5; display: flex; flex-wrap: wrap; gap: 4px; }
+        
+        .node-cat-codes-col { flex: 0 0 100px; text-align: center; font-family: monospace; font-size: 13px; color: var(--sol-base1); }
+        .node-cat-cites-col { flex: 0 0 100px; text-align: center; font-family: monospace; font-size: 13px; color: var(--sol-base1); }
+        .node-cat-sources-col { flex: 1.5; display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+
+        /* Edit category modal overlay */
+        .cuali-cat-edit-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(7, 54, 66, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            border-radius: 16px;
+            backdrop-filter: blur(4px);
+        }
+        .cuali-cat-edit-modal {
+            background: var(--sol-base3);
+            border: 1px solid rgba(147, 161, 161, 0.25);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 650px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(7, 54, 66, 0.15);
+            color: var(--sol-base01);
+            font-family: inherit;
+        }
+        .cuali-cat-edit-title {
+            font-family: Georgia, serif;
+            font-size: 1.2rem;
+            color: var(--sol-base02);
+            margin-top: 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(147, 161, 161, 0.15);
+            padding-bottom: 6px;
+        }
+        .cuali-cat-edit-field {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .cuali-cat-edit-field label {
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .cuali-cat-edit-input {
+            padding: 6px 10px;
+            border: 1px solid rgba(147, 161, 161, 0.3);
+            border-radius: 6px;
+            font-size: 13px;
+            background: var(--sol-base3);
+            color: var(--sol-base01);
+        }
+        .cuali-cat-edit-input:focus {
+            outline: none;
+            border-color: var(--sol-blue);
+        }
+        
+        .cuali-uncategorized-separator {
+            border-top: 1px dashed rgba(147, 161, 161, 0.3);
+            margin: 12px 0;
+        }
     `;
     document.head.appendChild(styleTag);
 
@@ -1932,10 +2264,15 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnTabMemos.className = "cuali-tab-btn";
     btnTabMemos.innerText = "Memos";
     
+    const btnTabCategorias = document.createElement("button");
+    btnTabCategorias.className = "cuali-tab-btn";
+    btnTabCategorias.innerText = "Categorías";
+    
     tabsLeft.appendChild(btnTabExportacion);
     tabsLeft.appendChild(btnTabCasos);
     tabsLeft.appendChild(btnTabCodebook);
     tabsLeft.appendChild(btnTabMemos);
+    tabsLeft.appendChild(btnTabCategorias);
     tabsNav.appendChild(tabsLeft);
 
     const controlsExport = document.createElement("div");
@@ -1951,10 +2288,14 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const controlsMemos = document.createElement("div");
     controlsMemos.className = "cuali-tabs-right";
 
+    const controlsCategorias = document.createElement("div");
+    controlsCategorias.className = "cuali-tabs-right";
+
     tabsNav.appendChild(controlsExport);
     tabsNav.appendChild(controlsCasos);
     tabsNav.appendChild(controlsCodebook);
     tabsNav.appendChild(controlsMemos);
+    tabsNav.appendChild(controlsCategorias);
     
     modal.appendChild(tabsNav);
 
@@ -1970,6 +2311,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const tabMemos = document.createElement("div");
     tabMemos.className = "cuali-tab-content";
+
+    const tabCategorias = document.createElement("div");
+    tabCategorias.className = "cuali-tab-content";
 
     // --- POPULATE TAB: EXPORTACION ---
     const btnExpandAll = document.createElement("button");
@@ -2047,7 +2391,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnGestionarExportacion.onclick = (e) => {
         e.preventDefault();
         const nodos = recolectarNodosChecked(rootNode);
-        mostrarModalGestion(nodos, "contextual", () => renderTabExportacion(true));
+        mostrarModalGestion(nodos, "contextual", () => {
+            renderTabExportacion(true);
+            renderTabCategorias();
+        });
     };
 
     const btnToggleSearchExport = document.createElement("button");
@@ -2273,6 +2620,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         mostrarModalGestion(nodos, "casos", () => {
             renderTabCasos();
             renderTabCodebook(true);
+            renderTabCategorias();
         });
     };
 
@@ -2295,6 +2643,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         refrescarCachesGlobales();
         renderTabCasos();
         renderTabCodebook();
+        renderTabCategorias();
         mostrarNotificacion("Listas refrescadas exitosamente.");
     };
 
@@ -2563,6 +2912,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         mostrarModalGestion(nodos, "codebook", () => {
             renderTabCodebook(true);
             renderTabCasos();
+            renderTabCategorias();
         });
     };
 
@@ -2923,6 +3273,365 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabMemos.appendChild(listMemosContainer);
     tabMemos.appendChild(infoNoteMemos);
 
+    // --- POPULATE TAB: CATEGORIAS ---
+    const btnExpandCategorias = document.createElement("button");
+    btnExpandCategorias.className = "cuali-btn-tool";
+    btnExpandCategorias.innerText = "⊞";
+    btnExpandCategorias.title = "Expandir todo";
+    btnExpandCategorias.onclick = (e) => {
+        e.preventDefault();
+        const uls = listCategoriasContainer.querySelectorAll("ul");
+        uls.forEach(ul => ul.style.display = "block");
+        const toggles = listCategoriasContainer.querySelectorAll(".tree-toggle");
+        toggles.forEach(toggle => toggle.innerText = "▼ ");
+    };
+
+    const btnCollapseCategorias = document.createElement("button");
+    btnCollapseCategorias.className = "cuali-btn-tool";
+    btnCollapseCategorias.innerText = "⊟";
+    btnCollapseCategorias.title = "Colapsar todo";
+    btnCollapseCategorias.onclick = (e) => {
+        e.preventDefault();
+        const uls = listCategoriasContainer.querySelectorAll("ul");
+        uls.forEach(ul => {
+            if (ul !== listCategoriasContainer.querySelector("ul")) {
+                ul.style.display = "none";
+            }
+        });
+        const toggles = listCategoriasContainer.querySelectorAll(".tree-toggle");
+        toggles.forEach(toggle => toggle.innerText = "▶ ");
+    };
+
+    const btnSelectAllCat = document.createElement("button");
+    btnSelectAllCat.className = "cuali-btn-tool";
+    btnSelectAllCat.innerText = "☑";
+    btnSelectAllCat.title = "Seleccionar todo";
+    btnSelectAllCat.onclick = (e) => {
+        e.preventDefault();
+        // Check if there is an active search filter in Categorías tab
+        const searchInput = tabCategorias.querySelector('.cuali-search-input');
+        if (searchInput && searchInput.value.trim() !== "" && searchInput.style.display !== "none") {
+            seleccionarNodosFiltrados(listCategoriasContainer, searchInput.value, categoriasTreeRoot);
+        } else {
+            if (categoriasTreeRoot) {
+                updateNodeCheckedState(categoriasTreeRoot, true);
+                const checkboxes = listCategoriasContainer.querySelectorAll("input[type='checkbox']");
+                checkboxes.forEach(cb => {
+                    cb.checked = true;
+                    cb.indeterminate = false;
+                });
+            }
+        }
+    };
+
+    const btnDeselectAllCat = document.createElement("button");
+    btnDeselectAllCat.className = "cuali-btn-tool";
+    btnDeselectAllCat.innerText = "☐";
+    btnDeselectAllCat.title = "Deseleccionar todo";
+    btnDeselectAllCat.onclick = (e) => {
+        e.preventDefault();
+        if (categoriasTreeRoot) {
+            updateNodeCheckedState(categoriasTreeRoot, false);
+            const checkboxes = listCategoriasContainer.querySelectorAll("input[type='checkbox']");
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                cb.indeterminate = false;
+            });
+        }
+    };
+
+    const btnRefreshCategorias = document.createElement("button");
+    btnRefreshCategorias.className = "cuali-btn-tool";
+    btnRefreshCategorias.innerText = "🔄";
+    btnRefreshCategorias.title = "Refrescar Categorías";
+    btnRefreshCategorias.onclick = (e) => {
+        e.preventDefault();
+        refrescarCachesGlobales();
+        renderTabCategorias();
+    };
+
+    controlsCategorias.appendChild(btnExpandCategorias);
+    controlsCategorias.appendChild(btnCollapseCategorias);
+    
+    const sepC1 = document.createElement("div");
+    sepC1.className = "cuali-toolbar-separator";
+    controlsCategorias.appendChild(sepC1);
+    
+    controlsCategorias.appendChild(btnSelectAllCat);
+    controlsCategorias.appendChild(btnDeselectAllCat);
+    
+    const sepC3 = document.createElement("div");
+    sepC3.className = "cuali-toolbar-separator";
+    controlsCategorias.appendChild(sepC3);
+    
+    controlsCategorias.appendChild(btnRefreshCategorias);
+
+    const searchCategoriasInput = document.createElement("input");
+    searchCategoriasInput.type = "text";
+    searchCategoriasInput.className = "cuali-search-input";
+    searchCategoriasInput.placeholder = "🔍 Filtrar categorías o códigos por nombre...";
+    searchCategoriasInput.style.display = "block";
+    searchCategoriasInput.oninput = () => {
+        filtrarArbolDOM(listCategoriasContainer, searchCategoriasInput.value);
+    };
+
+    const tableHeaderCategorias = document.createElement("div");
+    tableHeaderCategorias.className = "cuali-table-header";
+    tableHeaderCategorias.innerHTML = `
+        <div class="col-header col-cat-name" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-right: 12px; box-sizing: border-box; justify-content: space-between;">
+            <span>Categoría / Código</span>
+            <button id="btn-header-nueva-cat" class="cuali-btn-tool" style="padding: 2px 6px; font-size: 11px; color: var(--sol-blue); border-color: rgba(38, 139, 210, 0.2);" title="Crear nueva categoría analítica">➕</button>
+        </div>
+        <div class="col-header col-cat-codes" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Códigos</div>
+        <div class="col-header col-cat-cites" style="border-right: 1px solid rgba(147, 161, 161, 0.15); padding-left: 12px; padding-right: 12px; box-sizing: border-box;">Citas</div>
+        <div class="col-header col-cat-sources" style="padding-left: 12px; box-sizing: border-box;">Fuentes</div>
+    `;
+
+    const btnHeaderNuevaCat = tableHeaderCategorias.querySelector("#btn-header-nueva-cat");
+    btnHeaderNuevaCat.onclick = async (e) => {
+        e.preventDefault();
+        const nombre = prompt("Nombre de la nueva categoría analítica:");
+        if (nombre && nombre.trim()) {
+            const currentCategories = leerCategoriasDesdeRoam();
+            const normalized = nombre.trim();
+            if (currentCategories[normalized]) {
+                mostrarNotificacion("Ya existe una categoría con ese nombre.");
+                return;
+            }
+            await crearCategoriaRoam(normalized);
+            mostrarNotificacion("Categoría creada.");
+            refrescarCachesGlobales();
+            renderTabCategorias();
+        }
+    };
+
+    const listCategoriasContainer = document.createElement("div");
+    listCategoriasContainer.className = "cuali-list-box cuali-tree-container";
+
+    const infoNoteCategorias = document.createElement("div");
+    infoNoteCategorias.className = "cn-info-note";
+    infoNoteCategorias.innerHTML = `ℹ️ <em>Categorías analíticas. Cada categoría se guarda como una página en Roam (ej: <code>[[categoría/Mi Categoría]]</code>) y sus códigos asociados como referencias dentro de ella. Esto te permite editar y gestionar tus categorías directamente en tu grafo de Roam.</em>`;
+
+    const configSectionCategorias = crearSeccionConfiguracionExportacion();
+    
+    const buttonsCategorias = document.createElement("div");
+    buttonsCategorias.className = "cuali-buttons";
+    buttonsCategorias.style.display = "flex";
+    buttonsCategorias.style.gap = "8px";
+    buttonsCategorias.style.marginTop = "8px";
+
+    const btnCategoriasClipboard = document.createElement("button");
+    btnCategoriasClipboard.className = "cuali-btn cuali-btn-primary";
+    btnCategoriasClipboard.innerText = "📋 Copiar citas seleccionadas";
+    btnCategoriasClipboard.onclick = async (e) => {
+        e.preventDefault();
+        if (searchCategoriasInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(listCategoriasContainer, searchCategoriasInput.value, categoriasTreeRoot);
+        }
+        if (!categoriasTreeRoot || !nodoSeleccionadoOHijosSeleccionados(categoriasTreeRoot)) {
+            mostrarNotificacion("Selecciona al menos un código o categoría.");
+            return;
+        }
+        const clipboardText = generarTextoPortapapeles(categoriasTreeRoot, 0, 
+            parseInt(configSectionCategorias.querySelector(".num-above-input").value, 10) || 0,
+            parseInt(configSectionCategorias.querySelector(".num-below-input").value, 10) || 0,
+            configSectionCategorias.querySelector(".export-text-check").checked
+        );
+        await navigator.clipboard.writeText(clipboardText.trim());
+        mostrarNotificacion("Citas copiadas en formato árbol por categorías.");
+    };
+
+    const btnCategoriasPage = document.createElement("button");
+    btnCategoriasPage.className = "cuali-btn cuali-btn-primary";
+    btnCategoriasPage.innerText = "📄 Crear página consolidada";
+    btnCategoriasPage.onclick = async (e) => {
+        e.preventDefault();
+        if (searchCategoriasInput.value.trim() !== "") {
+            seleccionarNodosFiltrados(listCategoriasContainer, searchCategoriasInput.value, categoriasTreeRoot);
+        }
+        if (!categoriasTreeRoot || !nodoSeleccionadoOHijosSeleccionados(categoriasTreeRoot)) {
+            mostrarNotificacion("Selecciona al menos un código o categoría.");
+            return;
+        }
+        document.body.removeChild(overlay);
+        await generarPaginaConsolidadaArbol("Categorías Analíticas", categoriasTreeRoot,
+            parseInt(configSectionCategorias.querySelector(".num-above-input").value, 10) || 0,
+            parseInt(configSectionCategorias.querySelector(".num-below-input").value, 10) || 0,
+            configSectionCategorias.querySelector(".export-text-check").checked
+        );
+    };
+
+    function obtenerNodosSeleccionadosEnCategorias(treeNode, parentNode = null, result = { categorias: [], codesByCat: {} }) {
+        if (!treeNode) return result;
+        
+        if (treeNode.checked && treeNode.name !== "root") {
+            const isCategory = parentNode && parentNode.name === "root" && treeNode.name !== "__sin_categorizar__";
+            if (isCategory) {
+                result.categorias.push(treeNode);
+            } else if (treeNode.fullName && treeNode.fullName.startsWith("cod/")) {
+                const parentUid = parentNode ? parentNode.uid : null;
+                const parentName = parentNode ? parentNode.name : null;
+                if (!result.codesByCat[parentName]) {
+                    result.codesByCat[parentName] = {
+                        uid: parentUid,
+                        node: parentNode,
+                        codes: []
+                    };
+                }
+                result.codesByCat[parentName].codes.push(treeNode.fullName);
+            }
+        }
+        
+        for (const childName in treeNode.children) {
+            obtenerNodosSeleccionadosEnCategorias(treeNode.children[childName], treeNode, result);
+        }
+        
+        return result;
+    }
+
+    const btnVincular = document.createElement("button");
+    btnVincular.className = "cuali-btn cuali-btn-primary";
+    btnVincular.style.backgroundColor = "var(--sol-green)";
+    btnVincular.style.borderColor = "rgba(133, 153, 0, 0.4)";
+    btnVincular.innerText = "🔗 Vincular seleccionados";
+    btnVincular.onclick = async (e) => {
+        e.preventDefault();
+        const sel = obtenerNodosSeleccionadosEnCategorias(categoriasTreeRoot);
+        
+        if (sel.categorias.length !== 1) {
+            mostrarNotificacion("Selecciona exactamente 1 categoría para vincular.");
+            return;
+        }
+        
+        const targetCategory = sel.categorias[0];
+        const codesToLink = [];
+        for (const catName in sel.codesByCat) {
+            codesToLink.push(...sel.codesByCat[catName].codes);
+        }
+        
+        if (codesToLink.length === 0) {
+            mostrarNotificacion("Selecciona al menos 1 código para vincular.");
+            return;
+        }
+        
+        btnVincular.disabled = true;
+        btnVincular.innerText = "Vinculando...";
+        try {
+            await vincularCodigosACategoria(targetCategory.uid, codesToLink);
+            mostrarNotificacion(`Códigos vinculados a "${targetCategory.name}".`);
+            refrescarCachesGlobales();
+            renderTabCategorias();
+        } catch (err) {
+            console.error(err);
+            mostrarNotificacion("Error al vincular códigos.");
+        } finally {
+            btnVincular.disabled = false;
+            btnVincular.innerText = "🔗 Vincular seleccionados";
+        }
+    };
+
+    const btnDesvincular = document.createElement("button");
+    btnDesvincular.className = "cuali-btn";
+    btnDesvincular.style.color = "var(--sol-red)";
+    btnDesvincular.style.borderColor = "rgba(220, 50, 47, 0.4)";
+    btnDesvincular.innerText = "✂️ Desvincular seleccionados";
+    btnDesvincular.onclick = async (e) => {
+        e.preventDefault();
+        const sel = obtenerNodosSeleccionadosEnCategorias(categoriasTreeRoot);
+        
+        let totalDesvinculados = 0;
+        btnDesvincular.disabled = true;
+        btnDesvincular.innerText = "Desvinculando...";
+        try {
+            for (const catName in sel.codesByCat) {
+                if (catName === "__sin_categorizar__" || !sel.codesByCat[catName].uid) {
+                    continue;
+                }
+                const catUid = sel.codesByCat[catName].uid;
+                const codesToRemove = sel.codesByCat[catName].codes;
+                
+                if (codesToRemove.length > 0) {
+                    await desvincularCodigosDeCategoria(catUid, codesToRemove);
+                    totalDesvinculados += codesToRemove.length;
+                }
+            }
+            
+            if (totalDesvinculados === 0) {
+                mostrarNotificacion("Selecciona códigos dentro de categorías para desvincular.");
+                btnDesvincular.disabled = false;
+                btnDesvincular.innerText = "✂️ Desvincular seleccionados";
+                return;
+            }
+            
+            mostrarNotificacion("Códigos desvinculados.");
+            refrescarCachesGlobales();
+            renderTabCategorias();
+        } catch (err) {
+            console.error(err);
+            mostrarNotificacion("Error al desvincular.");
+        } finally {
+            btnDesvincular.disabled = false;
+            btnDesvincular.innerText = "✂️ Desvincular seleccionados";
+        }
+    };
+
+    buttonsCategorias.appendChild(btnCategoriasClipboard);
+    buttonsCategorias.appendChild(btnCategoriasPage);
+    buttonsCategorias.appendChild(btnVincular);
+    buttonsCategorias.appendChild(btnDesvincular);
+
+    tabCategorias.appendChild(searchCategoriasInput);
+    tabCategorias.appendChild(tableHeaderCategorias);
+    tabCategorias.appendChild(listCategoriasContainer);
+    tabCategorias.appendChild(infoNoteCategorias);
+    tabCategorias.appendChild(configSectionCategorias);
+    tabCategorias.appendChild(buttonsCategorias);
+
+    let categoriasTreeRoot = null;
+
+    function renderTabCategorias() {
+        listCategoriasContainer.innerHTML = "";
+        
+        const categoriasMap = leerCategoriasDesdeRoam();
+        const cb = obtenerCodebookGlobal();
+        const codTitles = cb["cod"] || [];
+        const codeRefsMap = obtenerReferenciasDeCodigos(codTitles);
+        
+        categoriasTreeRoot = construirArbolCategorias(categoriasMap, codeRefsMap);
+        
+        const rootUl = document.createElement("ul");
+        rootUl.style.paddingLeft = "0";
+        rootUl.style.margin = "0";
+        
+        if (categoriasTreeRoot && Object.keys(categoriasTreeRoot.children).length > 0) {
+            const childNamesSorted = Object.keys(categoriasTreeRoot.children).sort();
+            
+            childNamesSorted.forEach(childName => {
+                if (childName === "__sin_categorizar__") return;
+                rootUl.appendChild(renderCategoryNodeHTML(categoriasTreeRoot.children[childName], 0));
+            });
+            
+            if (categoriasTreeRoot.children["__sin_categorizar__"]) {
+                const sepLi = document.createElement("li");
+                sepLi.className = "cuali-uncategorized-separator";
+                sepLi.style.listStyleType = "none";
+                rootUl.appendChild(sepLi);
+                
+                rootUl.appendChild(renderCategoryNodeHTML(categoriasTreeRoot.children["__sin_categorizar__"], 0));
+            }
+        } else {
+            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px; list-style-type: none;'>No hay categorías analíticas. Haz clic en ➕ Nueva para crear una.</li>";
+        }
+        
+        listCategoriasContainer.appendChild(rootUl);
+        
+        if (searchCategoriasInput.value) {
+            filtrarArbolDOM(listCategoriasContainer, searchCategoriasInput.value);
+        }
+    }
+
+
+
     let memosTreeRoot = null;
 
     function renderTabCodebook(rebuild = true) {
@@ -3023,11 +3732,13 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     renderTabCasos();
     renderTabCodebook();
     renderTabMemos();
+    renderTabCategorias();
 
     modal.appendChild(tabExportacion);
     modal.appendChild(tabCasos);
     modal.appendChild(tabCodebook);
     modal.appendChild(tabMemos);
+    modal.appendChild(tabCategorias);
 
     // Cancel Button at the very bottom (global for the modal)
     const globalFooter = document.createElement("div");
@@ -3053,7 +3764,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         { btn: btnTabExportacion, content: tabExportacion, controls: controlsExport },
         { btn: btnTabCasos, content: tabCasos, controls: controlsCasos },
         { btn: btnTabCodebook, content: tabCodebook, controls: controlsCodebook },
-        { btn: btnTabMemos, content: tabMemos, controls: controlsMemos }
+        { btn: btnTabMemos, content: tabMemos, controls: controlsMemos },
+        { btn: btnTabCategorias, content: tabCategorias, controls: controlsCategorias }
     ];
 
     tabs.forEach(tab => {

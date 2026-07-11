@@ -293,5 +293,44 @@ function pivotAtDepth(node, targetDepth, currentDepth = 0, noDuplicar = false) {
     }
 }
 
+function construirArbolCategorias(categoriasMap, codeRefsMap) {
+    const root = new TreeNode("root");
+    const assignedCodes = new Set();
+    
+    for (const [catName, catInfo] of Object.entries(categoriasMap)) {
+        const catNode = new TreeNode(catName, "categoría/" + catName);
+        catNode.uid = catInfo.uid;
+        const codes = catInfo.codes || [];
+        
+        codes.forEach(codeName => {
+            assignedCodes.add(codeName);
+            const codeNode = new TreeNode(codeName, codeName);
+            codeNode.cites = codeRefsMap[codeName] || [];
+            catNode.children[codeName] = codeNode;
+        });
+        
+        root.children[catName] = catNode;
+    }
+    
+    const uncategorizedCodes = [];
+    for (const codeName of Object.keys(codeRefsMap)) {
+        if (!assignedCodes.has(codeName) && codeName.startsWith("cod/")) {
+            uncategorizedCodes.push(codeName);
+        }
+    }
+    
+    if (uncategorizedCodes.length > 0) {
+        const uncatNode = new TreeNode("Sin categorizar", "__sin_categorizar__");
+        uncategorizedCodes.forEach(codeName => {
+            const codeNode = new TreeNode(codeName, codeName);
+            codeNode.cites = codeRefsMap[codeName] || [];
+            uncatNode.children[codeName] = codeNode;
+        });
+        root.children["__sin_categorizar__"] = uncatNode;
+    }
+    
+    return root;
+}
+
 
 
