@@ -20,6 +20,7 @@ function obtenerContextoActual() {
 }
 
 function obtenerBloquesDePagina(pageUid) {
+    if (!pageUid) return [];
     return window.roamAlphaAPI.q(`
         [:find ?uid ?str
          :in $ ?page_uid

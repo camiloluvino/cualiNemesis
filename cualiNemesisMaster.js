@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.10.0 - Last Updated: 2026-07-11 16:23:46
+﻿// CualiNemesis v0.10.1 - Last Updated: 2026-07-11 21:47:35
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -19,6 +19,83 @@ function mostrarNotificacion(mensaje) {
     toast.style.transition = "opacity 0.15s ease";
     document.body.appendChild(toast);
     setTimeout(() => document.body.removeChild(toast), 3000);
+}
+
+function cualiCustomPrompt(mensaje, callback) {
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(0,0,0,0.5)";
+    overlay.style.zIndex = "10001";
+    overlay.style.display = "flex";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+
+    const box = document.createElement("div");
+    box.style.backgroundColor = "var(--sol-base3, white)";
+    box.style.padding = "20px";
+    box.style.borderRadius = "8px";
+    box.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+    box.style.display = "flex";
+    box.style.flexDirection = "column";
+    box.style.gap = "10px";
+    box.style.minWidth = "300px";
+    box.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+    const label = document.createElement("div");
+    label.innerText = mensaje;
+    label.style.color = "var(--sol-base00, black)";
+    label.style.fontWeight = "bold";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.style.padding = "8px";
+    input.style.border = "1px solid var(--sol-base1, #93a1a1)";
+    input.style.borderRadius = "4px";
+    
+    const btnContainer = document.createElement("div");
+    btnContainer.style.display = "flex";
+    btnContainer.style.justifyContent = "flex-end";
+    btnContainer.style.gap = "10px";
+    btnContainer.style.marginTop = "5px";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.innerText = "Cancelar";
+    btnCancel.className = "cuali-btn";
+    btnCancel.onclick = () => {
+        document.body.removeChild(overlay);
+        callback(null);
+    };
+
+    const btnOk = document.createElement("button");
+    btnOk.innerText = "Aceptar";
+    btnOk.className = "cuali-btn cuali-btn-primary";
+    btnOk.onclick = () => {
+        document.body.removeChild(overlay);
+        callback(input.value);
+    };
+
+    input.onkeydown = (e) => {
+        if (e.key === "Enter") {
+            btnOk.click();
+        } else if (e.key === "Escape") {
+            btnCancel.click();
+        }
+    };
+
+    btnContainer.appendChild(btnCancel);
+    btnContainer.appendChild(btnOk);
+    
+    box.appendChild(label);
+    box.appendChild(input);
+    box.appendChild(btnContainer);
+    overlay.appendChild(box);
+
+    document.body.appendChild(overlay);
+    setTimeout(() => input.focus(), 50);
 }
 
 
@@ -45,6 +122,7 @@ function obtenerContextoActual() {
 }
 
 function obtenerBloquesDePagina(pageUid) {
+    if (!pageUid) return [];
     return window.roamAlphaAPI.q(`
         [:find ?uid ?str
          :in $ ?page_uid
@@ -2628,7 +2706,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         .cuali-btn-tool[title]:hover::after {
             content: attr(title);
             position: absolute;
-            bottom: calc(100% + 6px);
+            top: calc(100% + 6px);
+            bottom: auto;
             left: 50%;
             transform: translateX(-50%);
             background: var(--sol-base02, #073642);
@@ -4266,21 +4345,23 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     `;
 
     const btnHeaderNuevaCat = tableHeaderCategorias.querySelector("#btn-header-nueva-cat");
-    btnHeaderNuevaCat.onclick = async (e) => {
+    btnHeaderNuevaCat.onclick = (e) => {
         e.preventDefault();
-        const nombre = prompt("Nombre de la nueva categoría analítica:");
-        if (nombre && nombre.trim()) {
-            const currentCategories = leerCategoriasDesdeRoam();
-            const normalized = nombre.trim();
-            if (currentCategories[normalized]) {
-                mostrarNotificacion("Ya existe una categoría con ese nombre.");
-                return;
+        e.stopPropagation();
+        cualiCustomPrompt("Nombre de la nueva categoría analítica:", async (nombre) => {
+            if (nombre && nombre.trim()) {
+                const currentCategories = leerCategoriasDesdeRoam();
+                const normalized = nombre.trim();
+                if (currentCategories[normalized]) {
+                    mostrarNotificacion("Ya existe una categoría con ese nombre.");
+                    return;
+                }
+                await crearCategoriaRoam(normalized);
+                mostrarNotificacion("Categoría creada.");
+                refrescarCachesGlobales();
+                renderTabCategorias();
             }
-            await crearCategoriaRoam(normalized);
-            mostrarNotificacion("Categoría creada.");
-            refrescarCachesGlobales();
-            renderTabCategorias();
-        }
+        });
     };
 
     const listCategoriasContainer = document.createElement("div");
@@ -4289,8 +4370,6 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const infoNoteCategorias = document.createElement("div");
     infoNoteCategorias.className = "cn-info-note";
     infoNoteCategorias.innerHTML = `ℹ️ <em>Categorías analíticas. Cada categoría se guarda como una página en Roam (ej: <code>[[categoría/Mi Categoría]]</code>) y sus códigos asociados como referencias dentro de ella. Esto te permite editar y gestionar tus categorías directamente en tu grafo de Roam.</em>`;
-
-    const configSectionCategorias = crearSeccionConfiguracionExportacion();
     
     const buttonsCategorias = document.createElement("div");
     buttonsCategorias.className = "cuali-buttons";
@@ -4311,9 +4390,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         const clipboardText = generarTextoPortapapeles(categoriasTreeRoot, 0, 
-            parseInt(configSectionCategorias.querySelector(".num-above-input").value, 10) || 0,
-            parseInt(configSectionCategorias.querySelector(".num-below-input").value, 10) || 0,
-            configSectionCategorias.querySelector(".export-text-check").checked
+            0,
+            0,
+            false
         );
         await navigator.clipboard.writeText(clipboardText.trim());
         mostrarNotificacion("Citas copiadas en formato árbol por categorías.");
@@ -4333,9 +4412,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         }
         document.body.removeChild(overlay);
         await generarPaginaConsolidadaArbol("Categorías Analíticas", categoriasTreeRoot,
-            parseInt(configSectionCategorias.querySelector(".num-above-input").value, 10) || 0,
-            parseInt(configSectionCategorias.querySelector(".num-below-input").value, 10) || 0,
-            configSectionCategorias.querySelector(".export-text-check").checked
+            0,
+            0,
+            false
         );
     };
 
@@ -4368,9 +4447,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     }
 
     const btnVincular = document.createElement("button");
-    btnVincular.className = "cuali-btn cuali-btn-primary";
-    btnVincular.style.backgroundColor = "var(--sol-green)";
-    btnVincular.style.borderColor = "rgba(133, 153, 0, 0.4)";
+    btnVincular.className = "cuali-btn";
+    btnVincular.style.color = "var(--sol-blue)";
+    btnVincular.style.borderColor = "rgba(38, 139, 210, 0.4)";
     btnVincular.innerText = "🔗 Vincular seleccionados";
     btnVincular.onclick = async (e) => {
         e.preventDefault();
@@ -4410,8 +4489,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnDesvincular = document.createElement("button");
     btnDesvincular.className = "cuali-btn";
-    btnDesvincular.style.color = "var(--sol-red)";
-    btnDesvincular.style.borderColor = "rgba(220, 50, 47, 0.4)";
+    btnDesvincular.style.color = "var(--sol-orange)";
+    btnDesvincular.style.borderColor = "rgba(203, 75, 22, 0.4)";
     btnDesvincular.innerText = "✂️ Desvincular seleccionados";
     btnDesvincular.onclick = async (e) => {
         e.preventDefault();
@@ -4462,7 +4541,6 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabCategorias.appendChild(tableHeaderCategorias);
     tabCategorias.appendChild(listCategoriasContainer);
     tabCategorias.appendChild(infoNoteCategorias);
-    tabCategorias.appendChild(configSectionCategorias);
     tabCategorias.appendChild(buttonsCategorias);
 
     let categoriasTreeRoot = null;
@@ -4498,7 +4576,11 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                 rootUl.appendChild(renderCategoryNodeHTML(categoriasTreeRoot.children["__sin_categorizar__"], 0));
             }
         } else {
-            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px; list-style-type: none;'>No hay categorías analíticas. Haz clic en ➕ Nueva para crear una.</li>";
+            const emptyLi = document.createElement("li");
+            emptyLi.style.cssText = "color: var(--sol-base1); padding: 10px; list-style-type: none; display: flex; align-items: center; gap: 10px;";
+            emptyLi.innerHTML = `No hay categorías analíticas. <button class="cuali-btn cuali-btn-primary" style="padding: 4px 8px;">➕ Crear primera categoría</button>`;
+            emptyLi.querySelector("button").onclick = (e) => btnHeaderNuevaCat.click();
+            rootUl.appendChild(emptyLi);
         }
         
         listCategoriasContainer.appendChild(rootUl);
@@ -4664,33 +4746,31 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
 // File: index.js
 function iniciarExtractorCualitativo() {
-    const contexto = obtenerContextoActual();
+    const contexto = obtenerContextoActual() || { uid: null, title: "Vista Global" };
     
-    if (!contexto) {
-        mostrarNotificacion("Error: No se pudo detectar la página. Asegúrate de estar en la vista de la entrevista.");
-        return;
-    }
-
     const { uid: pageUid, title: pageTitle } = contexto;
-    const blocks = obtenerBloquesDePagina(pageUid);
+    let rootNode = { name: "root", children: {} };
 
-    const codeMap = procesarBloques(blocks);
-    const codeMapWithObjects = {};
-    for (const [code, uids] of Object.entries(codeMap)) {
-        codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+    if (pageUid) {
+        const blocks = obtenerBloquesDePagina(pageUid);
+        const codeMap = procesarBloques(blocks);
+        const codeMapWithObjects = {};
+        for (const [code, uids] of Object.entries(codeMap)) {
+            codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+        }
+
+        if (Object.keys(codeMapWithObjects).length === 0) {
+            mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
+        }
+
+        rootNode = construirArbolCodigos(codeMapWithObjects);
     }
-
-    if (Object.keys(codeMapWithObjects).length === 0) {
-        mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
-    }
-
-    const rootNode = construirArbolCodigos(codeMapWithObjects);
 
     crearInterfazModal(rootNode, pageTitle, pageUid);
 }
 
 window.roamAlphaAPI.ui.commandPalette.addCommand({
-    label: "Cualitativo: Extraer códigos de la página actual",
+    label: "CualiNemesis: Abrir panel (Extracción, Categorías, IA)",
     callback: () => iniciarExtractorCualitativo()
 });
 

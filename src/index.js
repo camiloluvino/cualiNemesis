@@ -1,30 +1,28 @@
 function iniciarExtractorCualitativo() {
-    const contexto = obtenerContextoActual();
+    const contexto = obtenerContextoActual() || { uid: null, title: "Vista Global" };
     
-    if (!contexto) {
-        mostrarNotificacion("Error: No se pudo detectar la página. Asegúrate de estar en la vista de la entrevista.");
-        return;
-    }
-
     const { uid: pageUid, title: pageTitle } = contexto;
-    const blocks = obtenerBloquesDePagina(pageUid);
+    let rootNode = { name: "root", children: {} };
 
-    const codeMap = procesarBloques(blocks);
-    const codeMapWithObjects = {};
-    for (const [code, uids] of Object.entries(codeMap)) {
-        codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+    if (pageUid) {
+        const blocks = obtenerBloquesDePagina(pageUid);
+        const codeMap = procesarBloques(blocks);
+        const codeMapWithObjects = {};
+        for (const [code, uids] of Object.entries(codeMap)) {
+            codeMapWithObjects[code] = uids.map(uid => ({ uid: uid, page: pageTitle }));
+        }
+
+        if (Object.keys(codeMapWithObjects).length === 0) {
+            mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
+        }
+
+        rootNode = construirArbolCodigos(codeMapWithObjects);
     }
-
-    if (Object.keys(codeMapWithObjects).length === 0) {
-        mostrarNotificacion("Aviso: No se encontraron códigos en esta página.");
-    }
-
-    const rootNode = construirArbolCodigos(codeMapWithObjects);
 
     crearInterfazModal(rootNode, pageTitle, pageUid);
 }
 
 window.roamAlphaAPI.ui.commandPalette.addCommand({
-    label: "Cualitativo: Extraer códigos de la página actual",
+    label: "CualiNemesis: Abrir panel (Extracción, Categorías, IA)",
     callback: () => iniciarExtractorCualitativo()
 });

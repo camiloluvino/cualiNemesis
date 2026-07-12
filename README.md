@@ -75,7 +75,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 1. En tu grafo de Roam Research, crea una página llamada `[[roam/js]]` (si no existe ya).
 2. Añade un bloque de código JavaScript configurado como `JavaScript Code Block` y copia el contenido completo del archivo generado `cualiNemesisMaster.js`.
 3. Añade un bloque hijo que diga `{{[[roam/js]]}}` para habilitar el plugin.
-4. Para abrir el panel, abre la paleta de comandos de Roam (`Ctrl+P` o `Cmd+P`), busca `CualiNemesis: Abrir Extractor Cualitativo` y presiona Enter.
+4. Para abrir el panel, abre la paleta de comandos de Roam (`Ctrl+P` o `Cmd+P`), busca `CualiNemesis: Abrir panel (Extracción, Categorías, IA)` y presiona Enter. Se puede abrir desde cualquier lugar del grafo (adoptando "Vista Global" si no se está en una entrevista).
 
 ---
 

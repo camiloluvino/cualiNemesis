@@ -1,8 +1,9 @@
 # Estado del Proyecto (STATUS)
  
-## Fase Actual: Pestaña de Categorías (V 0.10.0)
+## Fase Actual: Pestaña de Categorías (V 0.10.1)
  
 ### Completado
+- [x] **Apertura Global y Prompt Personalizado (v0.10.1):** Habilitada la apertura del panel analítico desde cualquier parte de Roam (ej: Daily Notes o páginas globales) sin restricción de estar en una transcripción. En caso de no haber contexto de página activa, la interfaz adopta una "Vista Global". Se implementó un prompt personalizado (`cualiCustomPrompt`) para la creación de categorías analíticas para evadir el bloqueo de ventanas emergentes (`window.prompt`) común en clientes Electron de escritorio como Roam Desktop.
 - [x] **Pestaña de Categorías (v0.10.0):** Implementada la pestaña de Categorías analíticas con soporte de pertenencia múltiple para códigos cualitativos (prefijo `cod/`). La configuración se almacena en la página de Roam `[[CualiNemesis/categorías]]`. Incluye un modal interactivo de creación/edición de categorías con checkboxes sobre árbol de códigos y buscador, conteo agregado de citas y códigos, y soporte de exportación a portapapeles y página consolidada.
 - [x] **Pestaña de Memos Dedicada (v0.9.0):** Separación conceptual completa del namespace `memo/` de la pestaña de Codificación y Casos. Añadida la pestaña "Memos" que presenta los memos jerárquicamente, muestra un preview de texto de los primeros bloques y badges interactivos para los códigos cualitativos vinculados, facilitando la navegación cruzada.
 - [x] **Fusión de Pestañas y Controles (v0.8.1):** Rediseño total de la zona superior del modal. Se unificaron las pestañas de navegación (izquierda) y la barra de herramientas (derecha) en una sola fila horizontal (`cuali-tabs`). Los controles se alternan dinámicamente según la pestaña seleccionada. El buscador se despliega debajo de esta única fila solo cuando se activa (botón 🔍), maximizando el espacio de visualización útil vertical para las tablas de datos.

@@ -1750,7 +1750,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         .cuali-btn-tool[title]:hover::after {
             content: attr(title);
             position: absolute;
-            bottom: calc(100% + 6px);
+            top: calc(100% + 6px);
+            bottom: auto;
             left: 50%;
             transform: translateX(-50%);
             background: var(--sol-base02, #073642);
@@ -3388,21 +3389,23 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     `;
 
     const btnHeaderNuevaCat = tableHeaderCategorias.querySelector("#btn-header-nueva-cat");
-    btnHeaderNuevaCat.onclick = async (e) => {
+    btnHeaderNuevaCat.onclick = (e) => {
         e.preventDefault();
-        const nombre = prompt("Nombre de la nueva categoría analítica:");
-        if (nombre && nombre.trim()) {
-            const currentCategories = leerCategoriasDesdeRoam();
-            const normalized = nombre.trim();
-            if (currentCategories[normalized]) {
-                mostrarNotificacion("Ya existe una categoría con ese nombre.");
-                return;
+        e.stopPropagation();
+        cualiCustomPrompt("Nombre de la nueva categoría analítica:", async (nombre) => {
+            if (nombre && nombre.trim()) {
+                const currentCategories = leerCategoriasDesdeRoam();
+                const normalized = nombre.trim();
+                if (currentCategories[normalized]) {
+                    mostrarNotificacion("Ya existe una categoría con ese nombre.");
+                    return;
+                }
+                await crearCategoriaRoam(normalized);
+                mostrarNotificacion("Categoría creada.");
+                refrescarCachesGlobales();
+                renderTabCategorias();
             }
-            await crearCategoriaRoam(normalized);
-            mostrarNotificacion("Categoría creada.");
-            refrescarCachesGlobales();
-            renderTabCategorias();
-        }
+        });
     };
 
     const listCategoriasContainer = document.createElement("div");
@@ -3411,8 +3414,6 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const infoNoteCategorias = document.createElement("div");
     infoNoteCategorias.className = "cn-info-note";
     infoNoteCategorias.innerHTML = `ℹ️ <em>Categorías analíticas. Cada categoría se guarda como una página en Roam (ej: <code>[[categoría/Mi Categoría]]</code>) y sus códigos asociados como referencias dentro de ella. Esto te permite editar y gestionar tus categorías directamente en tu grafo de Roam.</em>`;
-
-    const configSectionCategorias = crearSeccionConfiguracionExportacion();
     
     const buttonsCategorias = document.createElement("div");
     buttonsCategorias.className = "cuali-buttons";
@@ -3433,9 +3434,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         const clipboardText = generarTextoPortapapeles(categoriasTreeRoot, 0, 
-            parseInt(configSectionCategorias.querySelector(".num-above-input").value, 10) || 0,
-            parseInt(configSectionCategorias.querySelector(".num-below-input").value, 10) || 0,
-            configSectionCategorias.querySelector(".export-text-check").checked
+            0,
+            0,
+            false
         );
         await navigator.clipboard.writeText(clipboardText.trim());
         mostrarNotificacion("Citas copiadas en formato árbol por categorías.");
@@ -3455,9 +3456,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         }
         document.body.removeChild(overlay);
         await generarPaginaConsolidadaArbol("Categorías Analíticas", categoriasTreeRoot,
-            parseInt(configSectionCategorias.querySelector(".num-above-input").value, 10) || 0,
-            parseInt(configSectionCategorias.querySelector(".num-below-input").value, 10) || 0,
-            configSectionCategorias.querySelector(".export-text-check").checked
+            0,
+            0,
+            false
         );
     };
 
@@ -3490,9 +3491,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     }
 
     const btnVincular = document.createElement("button");
-    btnVincular.className = "cuali-btn cuali-btn-primary";
-    btnVincular.style.backgroundColor = "var(--sol-green)";
-    btnVincular.style.borderColor = "rgba(133, 153, 0, 0.4)";
+    btnVincular.className = "cuali-btn";
+    btnVincular.style.color = "var(--sol-blue)";
+    btnVincular.style.borderColor = "rgba(38, 139, 210, 0.4)";
     btnVincular.innerText = "🔗 Vincular seleccionados";
     btnVincular.onclick = async (e) => {
         e.preventDefault();
@@ -3532,8 +3533,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnDesvincular = document.createElement("button");
     btnDesvincular.className = "cuali-btn";
-    btnDesvincular.style.color = "var(--sol-red)";
-    btnDesvincular.style.borderColor = "rgba(220, 50, 47, 0.4)";
+    btnDesvincular.style.color = "var(--sol-orange)";
+    btnDesvincular.style.borderColor = "rgba(203, 75, 22, 0.4)";
     btnDesvincular.innerText = "✂️ Desvincular seleccionados";
     btnDesvincular.onclick = async (e) => {
         e.preventDefault();
@@ -3584,7 +3585,6 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabCategorias.appendChild(tableHeaderCategorias);
     tabCategorias.appendChild(listCategoriasContainer);
     tabCategorias.appendChild(infoNoteCategorias);
-    tabCategorias.appendChild(configSectionCategorias);
     tabCategorias.appendChild(buttonsCategorias);
 
     let categoriasTreeRoot = null;
@@ -3620,7 +3620,11 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                 rootUl.appendChild(renderCategoryNodeHTML(categoriasTreeRoot.children["__sin_categorizar__"], 0));
             }
         } else {
-            rootUl.innerHTML = "<li style='color: var(--sol-base1); padding: 10px; list-style-type: none;'>No hay categorías analíticas. Haz clic en ➕ Nueva para crear una.</li>";
+            const emptyLi = document.createElement("li");
+            emptyLi.style.cssText = "color: var(--sol-base1); padding: 10px; list-style-type: none; display: flex; align-items: center; gap: 10px;";
+            emptyLi.innerHTML = `No hay categorías analíticas. <button class="cuali-btn cuali-btn-primary" style="padding: 4px 8px;">➕ Crear primera categoría</button>`;
+            emptyLi.querySelector("button").onclick = (e) => btnHeaderNuevaCat.click();
+            rootUl.appendChild(emptyLi);
         }
         
         listCategoriasContainer.appendChild(rootUl);
