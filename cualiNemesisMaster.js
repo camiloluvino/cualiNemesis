@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.11.0 - Last Updated: 2026-07-13 16:54:32
+﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-13 18:17:07
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -234,7 +234,9 @@ function obtenerConfiguracionPlugin() {
 
     const defaultConfig = {
         prefijoCasos: "entrevistadx",
-        sufijoAnalisis: "transcripción/a analizar"
+        sufijoAnalisis: "transcripción/a analizar",
+        sincronizarJerarquia: true,
+        prefijosSincronizacion: ["cod", "dim", "cat"]
     };
 
     const configPageUid = obtenerUIDPaginaPorTitulo("cualiNemesis/Configuración");
@@ -257,6 +259,19 @@ function obtenerConfiguracionPlugin() {
         const matchSufijo = str.match(/^Sufijo de análisis::\s*(.+)$/i);
         if (matchSufijo) {
             config.sufijoAnalisis = matchSufijo[1].trim();
+        }
+
+        const matchSincronizar = str.match(/^Sincronizar jerarquía::\s*(.+)$/i);
+        if (matchSincronizar) {
+            const val = matchSincronizar[1].trim().toLowerCase();
+            config.sincronizarJerarquia = (val === "sí" || val === "si" || val === "yes" || val === "true");
+        }
+
+        const matchPrefijosSync = str.match(/^Prefijos a sincronizar::\s*(.+)$/i);
+        if (matchPrefijosSync) {
+            config.prefijosSincronizacion = matchPrefijosSync[1].split(",")
+                .map(p => p.trim().toLowerCase())
+                .filter(p => p.length > 0);
         }
     });
 
@@ -326,6 +341,95 @@ function refrescarCachesGlobales() {
     obtenerCasosGlobal();
     obtenerCodebookGlobal();
     leerCategoriasDesdeRoam();
+    
+    // Ejecutar sincronización de jerarquía en segundo plano de manera asíncrona
+    sincronizarJerarquiaRoam().catch(err => {
+        console.error("Error al sincronizar jerarquía de códigos:", err);
+    });
+}
+
+function obtenerBloquesDirectosDePagina(pageUid) {
+    if (!pageUid) return [];
+    return window.roamAlphaAPI.q(`
+        [:find ?uid ?str
+         :in $ ?page_uid
+         :where
+         [?page :block/uid ?page_uid]
+         [?page :block/children ?b]
+         [?b :block/uid ?uid]
+         [?b :block/string ?str]]
+    `, pageUid) || [];
+}
+
+async function sincronizarJerarquiaRoam() {
+    const config = obtenerConfiguracionPlugin();
+    if (!config.sincronizarJerarquia) return;
+
+    const cb = obtenerCodebookGlobal();
+    const prefijos = config.prefijosSincronizacion;
+    if (!prefijos || prefijos.length === 0) return;
+
+    // 1. Obtener todos los títulos para construir el árbol global
+    const todosLosTitulos = [];
+    ["dom", "dim", "cat", "cod"].forEach(key => {
+        if (cb[key]) {
+            todosLosTitulos.push(...cb[key]);
+        }
+    });
+
+    if (todosLosTitulos.length === 0) return;
+
+    // 2. Construir árbol global en memoria
+    const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
+    const rootNode = construirArbolCodigos(codeMapGlobal);
+
+    // Helper recursivo para marcar selección basada en el prefijo
+    function marcarNodosPorPrefijo(node, prefix) {
+        if (node.fullName === prefix || node.fullName.startsWith(prefix + "/")) {
+            node.checked = true;
+        } else {
+            node.checked = false;
+        }
+        for (const childName in node.children) {
+            marcarNodosPorPrefijo(node.children[childName], prefix);
+        }
+    }
+
+    // 3. Iterar por cada prefijo a sincronizar
+    for (const prefix of prefijos) {
+        const parts = prefix.split('/');
+        const groupName = parts[0];
+        const groupNode = rootNode.children[groupName];
+        if (!groupNode) continue;
+
+        // Clonar el subárbol del grupo para no interferir con otras sincronizaciones
+        const groupClone = cloneSubtree(groupNode);
+        
+        // Marcar nodos seleccionados para el prefijo actual
+        marcarNodosPorPrefijo(groupClone, prefix);
+
+        // Si ningún nodo de este grupo quedó seleccionado, no sincronizar
+        if (!nodoSeleccionadoOHijosSeleccionados(groupClone)) continue;
+
+        // Encontrar o crear la página del prefijo en Roam
+        let pageUid = obtenerUIDPaginaPorTitulo(prefix);
+        if (!pageUid) {
+            pageUid = window.roamAlphaAPI.util.generateUID();
+            window.roamAlphaAPI.createPage({page: {title: prefix, uid: pageUid}});
+            await sleep(100);
+        }
+
+        // Limpiar la página por completo borrando bloques de primer nivel
+        const currentBlocks = obtenerBloquesDirectosDePagina(pageUid) || [];
+        for (const b of currentBlocks) {
+            const buid = b[0];
+            window.roamAlphaAPI.deleteBlock({block: {uid: buid}});
+            await sleep(50);
+        }
+
+        // Re-crear el árbol recursivamente en la página
+        await crearBloquesRecursivo(groupClone, pageUid, 0, 0, 0, false);
+    }
 }
 
 function obtenerReferenciasDeCodigos(titulos) {
