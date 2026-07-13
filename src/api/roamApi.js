@@ -125,15 +125,54 @@ async function generarPaginaConsolidadaArbol(originalTitle, rootNode, numAbove =
 let cacheCasos = null;
 let cacheCodebook = null;
 let cacheCategorias = null;
+let cacheConfiguracion = null;
+
+function obtenerConfiguracionPlugin() {
+    if (cacheConfiguracion) return cacheConfiguracion;
+
+    const defaultConfig = {
+        prefijoCasos: "entrevistadx",
+        sufijoAnalisis: "transcripción/a analizar"
+    };
+
+    const configPageUid = obtenerUIDPaginaPorTitulo("cualiNemesis/Configuración");
+    if (!configPageUid) {
+        cacheConfiguracion = defaultConfig;
+        return defaultConfig;
+    }
+
+    const bloques = obtenerBloquesDePagina(configPageUid) || [];
+    const config = { ...defaultConfig };
+
+    bloques.forEach(b => {
+        const str = b[1] ? b[1].trim() : "";
+        
+        const matchPrefijo = str.match(/^Prefijo de casos::\s*(.+)$/i);
+        if (matchPrefijo) {
+            config.prefijoCasos = matchPrefijo[1].trim();
+        }
+        
+        const matchSufijo = str.match(/^Sufijo de análisis::\s*(.+)$/i);
+        if (matchSufijo) {
+            config.sufijoAnalisis = matchSufijo[1].trim();
+        }
+    });
+
+    cacheConfiguracion = config;
+    return cacheConfiguracion;
+}
 
 function obtenerCasosGlobal() {
     if (cacheCasos) return cacheCasos;
+    const config = obtenerConfiguracionPlugin();
+    const prefixMatch = config.prefijoCasos + "/";
     const res = window.roamAlphaAPI.q(`
         [:find ?title 
+         :in $ ?prefix
          :where 
          [?p :node/title ?title] 
-         [(clojure.string/starts-with? ?title "entrevistadx/")]]
-    `);
+         [(clojure.string/starts-with? ?title ?prefix)]]
+    `, prefixMatch);
     cacheCasos = res.map(r => r[0])
                     .filter(title => {
                         const parts = title.split('/');
@@ -180,6 +219,8 @@ function refrescarCachesGlobales() {
     cacheCasos = null;
     cacheCodebook = null;
     cacheCategorias = null;
+    cacheConfiguracion = null;
+    obtenerConfiguracionPlugin();
     obtenerCasosGlobal();
     obtenerCodebookGlobal();
     leerCategoriasDesdeRoam();
@@ -202,7 +243,17 @@ function obtenerReferenciasDeCodigos(titulos) {
     const map = {};
     titulos.forEach(t => map[t] = []);
     
-    const validPagePattern = /^entrevistadx\/[^/]+\/transcripci[óo]n\/a analizar$/i;
+    const config = obtenerConfiguracionPlugin();
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedPrefix = escapeRegExp(config.prefijoCasos);
+    const escapedSuffix = escapeRegExp(config.sufijoAnalisis)
+        .replace(/[oó]/ig, '[oó]')
+        .replace(/[aá]/ig, '[aá]')
+        .replace(/[eé]/ig, '[eé]')
+        .replace(/[ií]/ig, '[ií]')
+        .replace(/[uú]/ig, '[uú]');
+    
+    const validPagePattern = new RegExp(`^${escapedPrefix}\\/[^/]+\\/${escapedSuffix}$`, 'i');
     
     if (res) {
         res.forEach(([title, buid, pageTitle]) => {

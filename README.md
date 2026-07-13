@@ -68,6 +68,11 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Borrado de Páginas**: Opción de eliminar la página correspondiente en el grafo de Roam para cada código borrado.
 * **Barra de Progreso y Rate Limiting**: Ejecuta los cambios de forma secuencial y espaciada con una barra de progreso en tiempo real para evitar errores de API en Roam.
 
+### 6. ⚙️ Configuración Dinámica Basada en Roam (v0.11.0)
+* **Página de configuración centralizada:** Lee la página `cualiNemesis/Configuración` en Roam para evitar tener que cambiar el código fuente al ajustar tu convención de nombres.
+* **Prefijo de casos dinámico:** Personaliza la etiqueta para agrupar tus casos (por defecto `entrevistadx`).
+* **Sufijo de análisis dinámico:** Define la subruta de las transcripciones que contienen el material codificado (por defecto `transcripción/a analizar`), con tolerancia inteligente de tildes (ej: `aAnalizar`).
+
 ---
 
 ## 🛠️ Instalación y Uso en Roam Research

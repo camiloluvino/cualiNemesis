@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.10.1 - Last Updated: 2026-07-11 21:47:35
+﻿// CualiNemesis v0.11.0 - Last Updated: 2026-07-13 16:54:32
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -227,15 +227,54 @@ async function generarPaginaConsolidadaArbol(originalTitle, rootNode, numAbove =
 let cacheCasos = null;
 let cacheCodebook = null;
 let cacheCategorias = null;
+let cacheConfiguracion = null;
+
+function obtenerConfiguracionPlugin() {
+    if (cacheConfiguracion) return cacheConfiguracion;
+
+    const defaultConfig = {
+        prefijoCasos: "entrevistadx",
+        sufijoAnalisis: "transcripción/a analizar"
+    };
+
+    const configPageUid = obtenerUIDPaginaPorTitulo("cualiNemesis/Configuración");
+    if (!configPageUid) {
+        cacheConfiguracion = defaultConfig;
+        return defaultConfig;
+    }
+
+    const bloques = obtenerBloquesDePagina(configPageUid) || [];
+    const config = { ...defaultConfig };
+
+    bloques.forEach(b => {
+        const str = b[1] ? b[1].trim() : "";
+        
+        const matchPrefijo = str.match(/^Prefijo de casos::\s*(.+)$/i);
+        if (matchPrefijo) {
+            config.prefijoCasos = matchPrefijo[1].trim();
+        }
+        
+        const matchSufijo = str.match(/^Sufijo de análisis::\s*(.+)$/i);
+        if (matchSufijo) {
+            config.sufijoAnalisis = matchSufijo[1].trim();
+        }
+    });
+
+    cacheConfiguracion = config;
+    return cacheConfiguracion;
+}
 
 function obtenerCasosGlobal() {
     if (cacheCasos) return cacheCasos;
+    const config = obtenerConfiguracionPlugin();
+    const prefixMatch = config.prefijoCasos + "/";
     const res = window.roamAlphaAPI.q(`
         [:find ?title 
+         :in $ ?prefix
          :where 
          [?p :node/title ?title] 
-         [(clojure.string/starts-with? ?title "entrevistadx/")]]
-    `);
+         [(clojure.string/starts-with? ?title ?prefix)]]
+    `, prefixMatch);
     cacheCasos = res.map(r => r[0])
                     .filter(title => {
                         const parts = title.split('/');
@@ -282,6 +321,8 @@ function refrescarCachesGlobales() {
     cacheCasos = null;
     cacheCodebook = null;
     cacheCategorias = null;
+    cacheConfiguracion = null;
+    obtenerConfiguracionPlugin();
     obtenerCasosGlobal();
     obtenerCodebookGlobal();
     leerCategoriasDesdeRoam();
@@ -304,7 +345,17 @@ function obtenerReferenciasDeCodigos(titulos) {
     const map = {};
     titulos.forEach(t => map[t] = []);
     
-    const validPagePattern = /^entrevistadx\/[^/]+\/transcripci[óo]n\/a analizar$/i;
+    const config = obtenerConfiguracionPlugin();
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedPrefix = escapeRegExp(config.prefijoCasos);
+    const escapedSuffix = escapeRegExp(config.sufijoAnalisis)
+        .replace(/[oó]/ig, '[oó]')
+        .replace(/[aá]/ig, '[aá]')
+        .replace(/[eé]/ig, '[eé]')
+        .replace(/[ií]/ig, '[ií]')
+        .replace(/[uú]/ig, '[uú]');
+    
+    const validPagePattern = new RegExp(`^${escapedPrefix}\\/[^/]+\\/${escapedSuffix}$`, 'i');
     
     if (res) {
         res.forEach(([title, buid, pageTitle]) => {
@@ -689,11 +740,13 @@ function cloneSubtree(node) {
 
 function collectCitesBySource(curr, relativePath = []) {
     const sourceMap = {};
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
     
     curr.cites.forEach(cite => {
         const pageParts = (cite.page || "").split('/');
         let sourceName = cite.page || "Desconocido";
-        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === casePrefix) {
             sourceName = pageParts[1];
         }
         
@@ -750,10 +803,13 @@ function collectCitesBySource(curr, relativePath = []) {
 
 function precalcularFuentes(node) {
     const sources = new Set();
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
+    
     node.cites.forEach(c => {
         const pageParts = (c.page || "").split('/');
         let sourceName = c.page || "Desconocido";
-        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === casePrefix) {
             sourceName = pageParts[1];
         }
         sources.add(sourceName);
@@ -775,12 +831,15 @@ function transformarNodoSmart(node) {
         return node;
     }
     
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
+    
     const newChildren = {};
     const citesBySource = {};
     node.cites.forEach(cite => {
         const pageParts = (cite.page || "").split('/');
         let sourceName = cite.page || "Desconocido";
-        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === casePrefix) {
             sourceName = pageParts[1];
         }
         if (!citesBySource[sourceName]) citesBySource[sourceName] = [];
@@ -809,7 +868,7 @@ function transformarNodoSmart(node) {
     ]);
     
     allSources.forEach(sourceName => {
-        const sourceNode = new TreeNode(sourceName, `entrevistadx/${sourceName}`);
+        const sourceNode = new TreeNode(sourceName, `${config.prefijoCasos}/${sourceName}`);
         sourceNode.checked = node.checked;
         
         if (exclusiveChildren[sourceName]) {
@@ -841,8 +900,9 @@ function pivotNode(node, noDuplicar) {
         const sourceMap = collectCitesBySource(node, []);
         const newChildren = {};
         
+        const config = obtenerConfiguracionPlugin();
         for (const sourceName in sourceMap) {
-            const sourceNode = new TreeNode(sourceName, `entrevistadx/${sourceName}`);
+            const sourceNode = new TreeNode(sourceName, `${config.prefijoCasos}/${sourceName}`);
             sourceNode.checked = node.checked;
             
             if (sourceMap[sourceName][""]) {
@@ -1333,6 +1393,8 @@ function getAggregateSources(node) {
 }
 
 function renderNodeHTML(node, hideSources = false, depth = 0) {
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
     const li = document.createElement("li");
     li.style.listStyleType = "none";
     li.style.margin = "0px 0";
@@ -1527,7 +1589,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
         
         if (uniqueSources.length > 0 && !hasChildren) {
             const formattedSources = uniqueSources.map(s => {
-                if (s.startsWith("entrevistadx/")) {
+                if (s.toLowerCase().startsWith(casePrefix + "/")) {
                     const parts = s.split('/');
                     if (parts.length >= 2) return parts[1];
                 }
@@ -1827,6 +1889,8 @@ function renderMemoNodeHTML(node, memoContentMap) {
 }
 
 function renderCategoryNodeHTML(node, depth = 0) {
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
     const li = document.createElement("li");
     li.style.listStyleType = "none";
     li.style.margin = "0px 0";
@@ -2023,7 +2087,7 @@ function renderCategoryNodeHTML(node, depth = 0) {
     
     if (uniqueSources.length > 0 && (depth > 0 || (depth === 0 && !hasChildren))) {
         const formattedSources = uniqueSources.map(s => {
-            if (s.startsWith("entrevistadx/")) {
+            if (s.toLowerCase().startsWith(casePrefix + "/")) {
                 const parts = s.split('/');
                 if (parts.length >= 2) return parts[1];
             }
@@ -2413,6 +2477,7 @@ function seleccionarNodosFiltrados(container, query, rootNodeObj) {
 }
 
 function crearInterfazModal(rootNode, pageTitle, pageUid) {
+    const config = obtenerConfiguracionPlugin();
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
     let arbolPivotado = false;
@@ -3635,7 +3700,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const infoNoteCasos = document.createElement("div");
     infoNoteCasos.className = "cn-info-note";
-    infoNoteCasos.innerHTML = `ℹ️ <em>Casos obtenidos de todas las páginas <code>entrevistadx/[Nombre]</code> del grafo. Los códigos se extraen de las subpáginas <code>entrevistadx/[Nombre]/transcripción/a analizar</code>.</em>`;
+    infoNoteCasos.innerHTML = `ℹ️ <em>Casos obtenidos de todas las páginas <code>${config.prefijoCasos}/[Nombre]</code> del grafo. Los códigos se extraen de las subpáginas <code>${config.prefijoCasos}/[Nombre]/${config.sufijoAnalisis}</code>.</em>`;
     
     const searchCasosInput = document.createElement("input");
     searchCasosInput.type = "text";
@@ -3715,7 +3780,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         if (isRoot) {
             for (const childName in node.children) {
                 const caseNode = node.children[childName];
-                caseNode.fullName = "entrevistadx/" + caseNode.name;
+                caseNode.fullName = config.prefijoCasos + "/" + caseNode.name;
                 fixCasosTreeFullNames(caseNode, false);
             }
         } else {
@@ -3744,19 +3809,20 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         const casos = obtenerCasosGlobal();
         
         if (casos.length === 0) {
-            listCasosContainer.innerHTML = "<div class='cuali-list-item' style='color: var(--sol-base1);'>No se encontraron casos (páginas que inician con entrevistadx/)</div>";
+            listCasosContainer.innerHTML = `<div class='cuali-list-item' style='color: var(--sol-base1);'>No se encontraron casos (páginas que inician con ${config.prefijoCasos}/)</div>`;
             return;
         }
 
+        const casePrefixLower = config.prefijoCasos.toLowerCase() + "/";
         casos.forEach(caso => {
-            const caseName = caso.replace(/^entrevistadx\//i, "");
+            const caseName = caso.toLowerCase().startsWith(casePrefixLower) ? caso.substring(casePrefixLower.length) : caso;
             caseCodeMap[caseName] = []; 
         });
 
         for (const [codePath, cites] of Object.entries(codeMapGlobal)) {
             cites.forEach(cite => {
                 const pageParts = (cite.page || "").split('/');
-                if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+                if (pageParts.length >= 2 && pageParts[0].toLowerCase() === config.prefijoCasos.toLowerCase()) {
                     const caseName = pageParts[1];
                     if (caseCodeMap[caseName] !== undefined) {
                         const fullPath = `${caseName}/${codePath}`;
@@ -4074,7 +4140,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const infoNoteCodebook = document.createElement("div");
     infoNoteCodebook.className = "cn-info-note";
-    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>entrevistadx/.../transcripción/a analizar</code>).</em>`;
+    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>${config.prefijoCasos}/.../${config.sufijoAnalisis}</code>).</em>`;
 
     tabCodebook.appendChild(searchCodebookInput);
     tabCodebook.appendChild(tableHeaderCodebook);

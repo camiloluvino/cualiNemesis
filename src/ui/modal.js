@@ -377,6 +377,8 @@ function getAggregateSources(node) {
 }
 
 function renderNodeHTML(node, hideSources = false, depth = 0) {
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
     const li = document.createElement("li");
     li.style.listStyleType = "none";
     li.style.margin = "0px 0";
@@ -571,7 +573,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
         
         if (uniqueSources.length > 0 && !hasChildren) {
             const formattedSources = uniqueSources.map(s => {
-                if (s.startsWith("entrevistadx/")) {
+                if (s.toLowerCase().startsWith(casePrefix + "/")) {
                     const parts = s.split('/');
                     if (parts.length >= 2) return parts[1];
                 }
@@ -871,6 +873,8 @@ function renderMemoNodeHTML(node, memoContentMap) {
 }
 
 function renderCategoryNodeHTML(node, depth = 0) {
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
     const li = document.createElement("li");
     li.style.listStyleType = "none";
     li.style.margin = "0px 0";
@@ -1067,7 +1071,7 @@ function renderCategoryNodeHTML(node, depth = 0) {
     
     if (uniqueSources.length > 0 && (depth > 0 || (depth === 0 && !hasChildren))) {
         const formattedSources = uniqueSources.map(s => {
-            if (s.startsWith("entrevistadx/")) {
+            if (s.toLowerCase().startsWith(casePrefix + "/")) {
                 const parts = s.split('/');
                 if (parts.length >= 2) return parts[1];
             }
@@ -1457,6 +1461,7 @@ function seleccionarNodosFiltrados(container, query, rootNodeObj) {
 }
 
 function crearInterfazModal(rootNode, pageTitle, pageUid) {
+    const config = obtenerConfiguracionPlugin();
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
     let arbolPivotado = false;
@@ -2679,7 +2684,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const infoNoteCasos = document.createElement("div");
     infoNoteCasos.className = "cn-info-note";
-    infoNoteCasos.innerHTML = `ℹ️ <em>Casos obtenidos de todas las páginas <code>entrevistadx/[Nombre]</code> del grafo. Los códigos se extraen de las subpáginas <code>entrevistadx/[Nombre]/transcripción/a analizar</code>.</em>`;
+    infoNoteCasos.innerHTML = `ℹ️ <em>Casos obtenidos de todas las páginas <code>${config.prefijoCasos}/[Nombre]</code> del grafo. Los códigos se extraen de las subpáginas <code>${config.prefijoCasos}/[Nombre]/${config.sufijoAnalisis}</code>.</em>`;
     
     const searchCasosInput = document.createElement("input");
     searchCasosInput.type = "text";
@@ -2759,7 +2764,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         if (isRoot) {
             for (const childName in node.children) {
                 const caseNode = node.children[childName];
-                caseNode.fullName = "entrevistadx/" + caseNode.name;
+                caseNode.fullName = config.prefijoCasos + "/" + caseNode.name;
                 fixCasosTreeFullNames(caseNode, false);
             }
         } else {
@@ -2788,19 +2793,20 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         const casos = obtenerCasosGlobal();
         
         if (casos.length === 0) {
-            listCasosContainer.innerHTML = "<div class='cuali-list-item' style='color: var(--sol-base1);'>No se encontraron casos (páginas que inician con entrevistadx/)</div>";
+            listCasosContainer.innerHTML = `<div class='cuali-list-item' style='color: var(--sol-base1);'>No se encontraron casos (páginas que inician con ${config.prefijoCasos}/)</div>`;
             return;
         }
 
+        const casePrefixLower = config.prefijoCasos.toLowerCase() + "/";
         casos.forEach(caso => {
-            const caseName = caso.replace(/^entrevistadx\//i, "");
+            const caseName = caso.toLowerCase().startsWith(casePrefixLower) ? caso.substring(casePrefixLower.length) : caso;
             caseCodeMap[caseName] = []; 
         });
 
         for (const [codePath, cites] of Object.entries(codeMapGlobal)) {
             cites.forEach(cite => {
                 const pageParts = (cite.page || "").split('/');
-                if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+                if (pageParts.length >= 2 && pageParts[0].toLowerCase() === config.prefijoCasos.toLowerCase()) {
                     const caseName = pageParts[1];
                     if (caseCodeMap[caseName] !== undefined) {
                         const fullPath = `${caseName}/${codePath}`;
@@ -3118,7 +3124,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const infoNoteCodebook = document.createElement("div");
     infoNoteCodebook.className = "cn-info-note";
-    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>entrevistadx/.../transcripción/a analizar</code>).</em>`;
+    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>${config.prefijoCasos}/.../${config.sufijoAnalisis}</code>).</em>`;
 
     tabCodebook.appendChild(searchCodebookInput);
     tabCodebook.appendChild(tableHeaderCodebook);

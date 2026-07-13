@@ -1,8 +1,9 @@
 # Estado del Proyecto (STATUS)
  
-## Fase Actual: Pestaña de Categorías (V 0.10.1)
+## Fase Actual: Configuración Dinámica Basada en Roam (V 0.11.0)
  
 ### Completado
+- [x] **Configuración Dinámica Basada en Roam (v0.11.0):** Implementada la lectura de la página `cualiNemesis/Configuración` en Roam para cargar dinámicamente el prefijo de casos (`Prefijo de casos::`) y el sufijo de transcripciones a analizar (`Sufijo de análisis::`), evitando editar el código fuente para cambiar convenciones. Las búsquedas de casos, referencias, y agrupaciones pivoteadas ahora se ajustan dinámicamente. La interfaz de usuario refleja los cambios en las descripciones de las pestañas.
 - [x] **Apertura Global y Prompt Personalizado (v0.10.1):** Habilitada la apertura del panel analítico desde cualquier parte de Roam (ej: Daily Notes o páginas globales) sin restricción de estar en una transcripción. En caso de no haber contexto de página activa, la interfaz adopta una "Vista Global". Se implementó un prompt personalizado (`cualiCustomPrompt`) para la creación de categorías analíticas para evadir el bloqueo de ventanas emergentes (`window.prompt`) común en clientes Electron de escritorio como Roam Desktop.
 - [x] **Pestaña de Categorías (v0.10.0):** Implementada la pestaña de Categorías analíticas con soporte de pertenencia múltiple para códigos cualitativos (prefijo `cod/`). La configuración se almacena en la página de Roam `[[CualiNemesis/categorías]]`. Incluye un modal interactivo de creación/edición de categorías con checkboxes sobre árbol de códigos y buscador, conteo agregado de citas y códigos, y soporte de exportación a portapapeles y página consolidada.
 - [x] **Pestaña de Memos Dedicada (v0.9.0):** Separación conceptual completa del namespace `memo/` de la pestaña de Codificación y Casos. Añadida la pestaña "Memos" que presenta los memos jerárquicamente, muestra un preview de texto de los primeros bloques y badges interactivos para los códigos cualitativos vinculados, facilitando la navegación cruzada.

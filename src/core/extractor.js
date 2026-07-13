@@ -72,11 +72,13 @@ function cloneSubtree(node) {
 
 function collectCitesBySource(curr, relativePath = []) {
     const sourceMap = {};
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
     
     curr.cites.forEach(cite => {
         const pageParts = (cite.page || "").split('/');
         let sourceName = cite.page || "Desconocido";
-        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === casePrefix) {
             sourceName = pageParts[1];
         }
         
@@ -133,10 +135,13 @@ function collectCitesBySource(curr, relativePath = []) {
 
 function precalcularFuentes(node) {
     const sources = new Set();
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
+    
     node.cites.forEach(c => {
         const pageParts = (c.page || "").split('/');
         let sourceName = c.page || "Desconocido";
-        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === casePrefix) {
             sourceName = pageParts[1];
         }
         sources.add(sourceName);
@@ -158,12 +163,15 @@ function transformarNodoSmart(node) {
         return node;
     }
     
+    const config = obtenerConfiguracionPlugin();
+    const casePrefix = config.prefijoCasos.toLowerCase();
+    
     const newChildren = {};
     const citesBySource = {};
     node.cites.forEach(cite => {
         const pageParts = (cite.page || "").split('/');
         let sourceName = cite.page || "Desconocido";
-        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === "entrevistadx") {
+        if (pageParts.length >= 2 && pageParts[0].toLowerCase() === casePrefix) {
             sourceName = pageParts[1];
         }
         if (!citesBySource[sourceName]) citesBySource[sourceName] = [];
@@ -192,7 +200,7 @@ function transformarNodoSmart(node) {
     ]);
     
     allSources.forEach(sourceName => {
-        const sourceNode = new TreeNode(sourceName, `entrevistadx/${sourceName}`);
+        const sourceNode = new TreeNode(sourceName, `${config.prefijoCasos}/${sourceName}`);
         sourceNode.checked = node.checked;
         
         if (exclusiveChildren[sourceName]) {
@@ -224,8 +232,9 @@ function pivotNode(node, noDuplicar) {
         const sourceMap = collectCitesBySource(node, []);
         const newChildren = {};
         
+        const config = obtenerConfiguracionPlugin();
         for (const sourceName in sourceMap) {
-            const sourceNode = new TreeNode(sourceName, `entrevistadx/${sourceName}`);
+            const sourceNode = new TreeNode(sourceName, `${config.prefijoCasos}/${sourceName}`);
             sourceNode.checked = node.checked;
             
             if (sourceMap[sourceName][""]) {
