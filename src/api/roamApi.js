@@ -177,6 +177,67 @@ function obtenerConfiguracionPlugin() {
     return cacheConfiguracion;
 }
 
+async function guardarConfiguracionPlugin(nuevaConfig) {
+    const pageTitle = "cualiNemesis/Configuración";
+    let configPageUid = obtenerUIDPaginaPorTitulo(pageTitle);
+    
+    if (!configPageUid) {
+        configPageUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createPage({page: {title: pageTitle, uid: configPageUid}});
+        await sleep(100);
+    }
+
+    const bloques = obtenerBloquesDePagina(configPageUid) || [];
+    
+    const configMap = {
+        prefijoCasos: `Prefijo de casos:: ${nuevaConfig.prefijoCasos}`,
+        sufijoAnalisis: `Sufijo de análisis:: ${nuevaConfig.sufijoAnalisis}`,
+        sincronizarJerarquia: `Sincronizar jerarquía:: ${nuevaConfig.sincronizarJerarquia ? 'sí' : 'no'}`,
+        prefijosSincronizacion: `Prefijos a sincronizar:: ${nuevaConfig.prefijosSincronizacion.join(", ")}`
+    };
+
+    const keysMap = {
+        prefijoCasos: /^Prefijo de casos::/i,
+        sufijoAnalisis: /^Sufijo de análisis::/i,
+        sincronizarJerarquia: /^Sincronizar jerarquía::/i,
+        prefijosSincronizacion: /^Prefijos a sincronizar::/i
+    };
+
+    const blockUids = {};
+    bloques.forEach(b => {
+        const uid = b[0];
+        const str = b[1] ? b[1].trim() : "";
+        for (const [key, regex] of Object.entries(keysMap)) {
+            if (regex.test(str)) {
+                blockUids[key] = uid;
+            }
+        }
+    });
+
+    let order = 0;
+    for (const [key, text] of Object.entries(configMap)) {
+        if (blockUids[key]) {
+            window.roamAlphaAPI.updateBlock({block: {uid: blockUids[key], string: text}});
+        } else {
+            const newUid = window.roamAlphaAPI.util.generateUID();
+            window.roamAlphaAPI.createBlock({
+                location: { "parent-uid": configPageUid, order: order },
+                block: { string: text, uid: newUid }
+            });
+        }
+        order++;
+        await sleep(50);
+    }
+
+    cacheConfiguracion = null;
+    cacheCasos = null;
+    cacheCodebook = null;
+    cacheCategorias = null;
+    
+    obtenerConfiguracionPlugin();
+}
+
+
 function obtenerCasosGlobal() {
     if (cacheCasos) return cacheCasos;
     const config = obtenerConfiguracionPlugin();

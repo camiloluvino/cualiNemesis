@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-13 18:17:07
+﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-13 22:19:43
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -278,6 +278,67 @@ function obtenerConfiguracionPlugin() {
     cacheConfiguracion = config;
     return cacheConfiguracion;
 }
+
+async function guardarConfiguracionPlugin(nuevaConfig) {
+    const pageTitle = "cualiNemesis/Configuración";
+    let configPageUid = obtenerUIDPaginaPorTitulo(pageTitle);
+    
+    if (!configPageUid) {
+        configPageUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createPage({page: {title: pageTitle, uid: configPageUid}});
+        await sleep(100);
+    }
+
+    const bloques = obtenerBloquesDePagina(configPageUid) || [];
+    
+    const configMap = {
+        prefijoCasos: `Prefijo de casos:: ${nuevaConfig.prefijoCasos}`,
+        sufijoAnalisis: `Sufijo de análisis:: ${nuevaConfig.sufijoAnalisis}`,
+        sincronizarJerarquia: `Sincronizar jerarquía:: ${nuevaConfig.sincronizarJerarquia ? 'sí' : 'no'}`,
+        prefijosSincronizacion: `Prefijos a sincronizar:: ${nuevaConfig.prefijosSincronizacion.join(", ")}`
+    };
+
+    const keysMap = {
+        prefijoCasos: /^Prefijo de casos::/i,
+        sufijoAnalisis: /^Sufijo de análisis::/i,
+        sincronizarJerarquia: /^Sincronizar jerarquía::/i,
+        prefijosSincronizacion: /^Prefijos a sincronizar::/i
+    };
+
+    const blockUids = {};
+    bloques.forEach(b => {
+        const uid = b[0];
+        const str = b[1] ? b[1].trim() : "";
+        for (const [key, regex] of Object.entries(keysMap)) {
+            if (regex.test(str)) {
+                blockUids[key] = uid;
+            }
+        }
+    });
+
+    let order = 0;
+    for (const [key, text] of Object.entries(configMap)) {
+        if (blockUids[key]) {
+            window.roamAlphaAPI.updateBlock({block: {uid: blockUids[key], string: text}});
+        } else {
+            const newUid = window.roamAlphaAPI.util.generateUID();
+            window.roamAlphaAPI.createBlock({
+                location: { "parent-uid": configPageUid, order: order },
+                block: { string: text, uid: newUid }
+            });
+        }
+        order++;
+        await sleep(50);
+    }
+
+    cacheConfiguracion = null;
+    cacheCasos = null;
+    cacheCodebook = null;
+    cacheCategorias = null;
+    
+    obtenerConfiguracionPlugin();
+}
+
 
 function obtenerCasosGlobal() {
     if (cacheCasos) return cacheCasos;
@@ -3240,6 +3301,83 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             border-top: 1px dashed rgba(147, 161, 161, 0.3);
             margin: 12px 0;
         }
+        
+        /* Estilos Pestaña Configuración */
+        .cuali-config-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 24px;
+            background: #ffffff;
+            border: 1px solid rgba(147, 161, 161, 0.15);
+            border-radius: 12px;
+            max-width: 700px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+        .cuali-config-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .cuali-config-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--sol-base02);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cuali-config-input {
+            padding: 8px 12px;
+            border: 1px solid rgba(147, 161, 161, 0.3);
+            border-radius: 6px;
+            background: var(--sol-base3);
+            font-size: 14px;
+            color: var(--sol-base00);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .cuali-config-input:focus {
+            border-color: var(--sol-blue);
+        }
+        .cuali-config-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cuali-config-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .cuali-config-description {
+            font-size: 12px;
+            color: var(--sol-base1);
+            margin-top: -4px;
+            line-height: 1.4;
+        }
+        .cuali-config-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        .cuali-config-btn-save {
+            background-color: var(--sol-blue);
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .cuali-config-btn-save:hover {
+            background-color: #1b74b3;
+        }
     `;
     document.head.appendChild(styleTag);
 
@@ -3386,19 +3524,24 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnTabCodebook.className = "cuali-tab-btn";
     btnTabCodebook.innerText = "Codificación";
     
+    const btnTabCategorias = document.createElement("button");
+    btnTabCategorias.className = "cuali-tab-btn";
+    btnTabCategorias.innerText = "Categorías";
+
+    const btnTabConfiguracion = document.createElement("button");
+    btnTabConfiguracion.className = "cuali-tab-btn";
+    btnTabConfiguracion.innerText = "Configuración";
+
     const btnTabMemos = document.createElement("button");
     btnTabMemos.className = "cuali-tab-btn";
     btnTabMemos.innerText = "Memos";
     
-    const btnTabCategorias = document.createElement("button");
-    btnTabCategorias.className = "cuali-tab-btn";
-    btnTabCategorias.innerText = "Categorías";
-    
     tabsLeft.appendChild(btnTabExportacion);
     tabsLeft.appendChild(btnTabCasos);
     tabsLeft.appendChild(btnTabCodebook);
-    tabsLeft.appendChild(btnTabMemos);
     tabsLeft.appendChild(btnTabCategorias);
+    tabsLeft.appendChild(btnTabConfiguracion);
+    tabsLeft.appendChild(btnTabMemos);
     tabsNav.appendChild(tabsLeft);
 
     const controlsExport = document.createElement("div");
@@ -3411,17 +3554,21 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const controlsCodebook = document.createElement("div");
     controlsCodebook.className = "cuali-tabs-right";
 
-    const controlsMemos = document.createElement("div");
-    controlsMemos.className = "cuali-tabs-right";
-
     const controlsCategorias = document.createElement("div");
     controlsCategorias.className = "cuali-tabs-right";
+
+    const controlsConfiguracion = document.createElement("div");
+    controlsConfiguracion.className = "cuali-tabs-right";
+
+    const controlsMemos = document.createElement("div");
+    controlsMemos.className = "cuali-tabs-right";
 
     tabsNav.appendChild(controlsExport);
     tabsNav.appendChild(controlsCasos);
     tabsNav.appendChild(controlsCodebook);
-    tabsNav.appendChild(controlsMemos);
     tabsNav.appendChild(controlsCategorias);
+    tabsNav.appendChild(controlsConfiguracion);
+    tabsNav.appendChild(controlsMemos);
     
     modal.appendChild(tabsNav);
 
@@ -3435,11 +3582,14 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const tabCodebook = document.createElement("div");
     tabCodebook.className = "cuali-tab-content";
 
-    const tabMemos = document.createElement("div");
-    tabMemos.className = "cuali-tab-content";
-
     const tabCategorias = document.createElement("div");
     tabCategorias.className = "cuali-tab-content";
+
+    const tabConfiguracion = document.createElement("div");
+    tabConfiguracion.className = "cuali-tab-content";
+
+    const tabMemos = document.createElement("div");
+    tabMemos.className = "cuali-tab-content";
 
     // --- POPULATE TAB: EXPORTACION ---
     const btnExpandAll = document.createElement("button");
@@ -4858,17 +5008,141 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         }
     }
 
+    function renderTabConfiguracion() {
+        tabConfiguracion.innerHTML = "";
+        
+        const config = obtenerConfiguracionPlugin();
+        
+        const container = document.createElement("div");
+        container.className = "cuali-config-container";
+        
+        // 1. Prefijo de casos
+        const groupPrefijo = document.createElement("div");
+        groupPrefijo.className = "cuali-config-group";
+        groupPrefijo.innerHTML = `
+            <label class="cuali-config-label">📁 Prefijo de casos</label>
+            <input type="text" class="cuali-config-input" id="cuali-cfg-prefijo" value="${config.prefijoCasos}">
+            <div class="cuali-config-description">Prefijo en las páginas de Roam para identificar casos (ej: 'entrevistadx' detectará 'entrevistadx/Caso 1').</div>
+        `;
+        container.appendChild(groupPrefijo);
+        
+        // 2. Sufijo de análisis
+        const groupSufijo = document.createElement("div");
+        groupSufijo.className = "cuali-config-group";
+        groupSufijo.innerHTML = `
+            <label class="cuali-config-label">📝 Sufijo de análisis</label>
+            <input type="text" class="cuali-config-input" id="cuali-cfg-sufijo" value="${config.sufijoAnalisis}">
+            <div class="cuali-config-description">Texto para identificar los bloques a analizar en cada caso (ej: 'transcripción/a analizar').</div>
+        `;
+        container.appendChild(groupSufijo);
+        
+        // 3. Sincronizar jerarquía
+        const groupSincronizar = document.createElement("div");
+        groupSincronizar.className = "cuali-config-group";
+        
+        const labelSincronizar = document.createElement("label");
+        labelSincronizar.className = "cuali-config-checkbox-group";
+        
+        const checkboxSincronizar = document.createElement("input");
+        checkboxSincronizar.type = "checkbox";
+        checkboxSincronizar.className = "cuali-config-checkbox";
+        checkboxSincronizar.id = "cuali-cfg-sincronizar";
+        checkboxSincronizar.checked = config.sincronizarJerarquia;
+        
+        labelSincronizar.appendChild(checkboxSincronizar);
+        labelSincronizar.appendChild(document.createTextNode(" Sincronizar jerarquía"));
+        
+        groupSincronizar.appendChild(labelSincronizar);
+        
+        const descSincronizar = document.createElement("div");
+        descSincronizar.className = "cuali-config-description";
+        descSincronizar.innerText = "Sincroniza automáticamente la jerarquía de páginas de Roam con los namespaces definidos.";
+        groupSincronizar.appendChild(descSincronizar);
+        
+        container.appendChild(groupSincronizar);
+        
+        // 4. Prefijos a sincronizar
+        const groupPrefijosSync = document.createElement("div");
+        groupPrefijosSync.className = "cuali-config-group";
+        groupPrefijosSync.innerHTML = `
+            <label class="cuali-config-label">🏷️ Prefijos a sincronizar</label>
+            <input type="text" class="cuali-config-input" id="cuali-cfg-prefijos-sync" value="${config.prefijosSincronizacion.join(", ")}">
+            <div class="cuali-config-description">Prefijos o namespaces que se deben sincronizar, separados por comas (ej: 'cod, dim, cat').</div>
+        `;
+        container.appendChild(groupPrefijosSync);
+        
+        // 5. Actions (Save Button)
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "cuali-config-actions";
+        
+        const btnSave = document.createElement("button");
+        btnSave.className = "cuali-config-btn-save";
+        btnSave.innerText = "Guardar Configuración";
+        btnSave.onclick = async (e) => {
+            e.preventDefault();
+            btnSave.disabled = true;
+            btnSave.innerText = "Guardando...";
+            
+            const prefijoCasosVal = document.getElementById("cuali-cfg-prefijo").value.trim();
+            const sufijoAnalisisVal = document.getElementById("cuali-cfg-sufijo").value.trim();
+            const sincronizarJerarquiaVal = document.getElementById("cuali-cfg-sincronizar").checked;
+            const prefijosSincronizacionVal = document.getElementById("cuali-cfg-prefijos-sync").value
+                .split(",")
+                .map(p => p.trim())
+                .filter(p => p.length > 0);
+                
+            if (!prefijoCasosVal || !sufijoAnalisisVal) {
+                mostrarNotificacion("Error: El prefijo de casos y el sufijo de análisis son obligatorios.");
+                btnSave.disabled = false;
+                btnSave.innerText = "Guardar Configuración";
+                return;
+            }
+            
+            try {
+                await guardarConfiguracionPlugin({
+                    prefijoCasos: prefijoCasosVal,
+                    sufijoAnalisis: sufijoAnalisisVal,
+                    sincronizarJerarquia: sincronizarJerarquiaVal,
+                    prefijosSincronizacion: prefijosSincronizacionVal
+                });
+                
+                mostrarNotificacion("Configuración guardada correctamente en Roam.");
+                
+                // Recargar las otras pestañas que dependen de la configuración
+                refrescarCachesGlobales();
+                renderTabCasos();
+                renderTabCodebook(true);
+                renderTabMemos();
+                renderTabCategorias();
+                
+            } catch (err) {
+                console.error(err);
+                mostrarNotificacion("Error al guardar la configuración: " + err.message);
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerText = "Guardar Configuración";
+            }
+        };
+        
+        actionsDiv.appendChild(btnSave);
+        container.appendChild(actionsDiv);
+        
+        tabConfiguracion.appendChild(container);
+    }
+
     // Initial Render of Global Tabs
     renderTabCasos();
     renderTabCodebook();
     renderTabMemos();
     renderTabCategorias();
+    renderTabConfiguracion();
 
     modal.appendChild(tabExportacion);
     modal.appendChild(tabCasos);
     modal.appendChild(tabCodebook);
-    modal.appendChild(tabMemos);
     modal.appendChild(tabCategorias);
+    modal.appendChild(tabConfiguracion);
+    modal.appendChild(tabMemos);
 
     // Cancel Button at the very bottom (global for the modal)
     const globalFooter = document.createElement("div");
@@ -4894,8 +5168,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         { btn: btnTabExportacion, content: tabExportacion, controls: controlsExport },
         { btn: btnTabCasos, content: tabCasos, controls: controlsCasos },
         { btn: btnTabCodebook, content: tabCodebook, controls: controlsCodebook },
-        { btn: btnTabMemos, content: tabMemos, controls: controlsMemos },
-        { btn: btnTabCategorias, content: tabCategorias, controls: controlsCategorias }
+        { btn: btnTabCategorias, content: tabCategorias, controls: controlsCategorias },
+        { btn: btnTabConfiguracion, content: tabConfiguracion, controls: controlsConfiguracion },
+        { btn: btnTabMemos, content: tabMemos, controls: controlsMemos }
     ];
 
     tabs.forEach(tab => {

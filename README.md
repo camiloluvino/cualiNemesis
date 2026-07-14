@@ -68,11 +68,12 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Borrado de Páginas**: Opción de eliminar la página correspondiente en el grafo de Roam para cada código borrado.
 * **Barra de Progreso y Rate Limiting**: Ejecuta los cambios de forma secuencial y espaciada con una barra de progreso en tiempo real para evitar errores de API en Roam.
 
-### 6. ⚙️ Configuración Dinámica Basada en Roam (v0.12.0)
-* **Página de configuración centralizada:** Lee la página `cualiNemesis/Configuración` en Roam para evitar tener que cambiar el código fuente al ajustar tu convención de nombres.
+### 6. ⚙️ Configuración Dinámica y Bidireccional (v0.12.0)
+* **Pestaña de configuración integrada:** Se añadió una pestaña dedicada de "Configuración" en el panel de CualiNemesis que permite editar los parámetros sin salir de la aplicación.
+* **Sincronización bidireccional:** Lee y escribe directamente en la página `cualiNemesis/Configuración` de Roam. Al guardar la configuración en la app, se actualizan los bloques correspondientes en Roam y se recarga en caliente la interfaz del plugin.
 * **Prefijo de casos dinámico:** Personaliza la etiqueta para agrupar tus casos (por defecto `entrevistadx`).
 * **Sufijo de análisis dinámico:** Define la subruta de las transcripciones que contienen el material codificado (por defecto `transcripción/a analizar`), con tolerancia inteligente de tildes (ej: `aAnalizar`).
-* **Sincronización de jerarquía en páginas (v0.12.0):** Sincroniza automáticamente la estructura del árbol de códigos en las páginas de Roam de manera nativa (ej: la página `[[cod/norm]]` tendrá bloques automáticos apuntando a `[[cod/norm/tension]]` y `[[cod/norm/afect]]`).
+* **Sincronización de jerarquía en páginas:** Sincroniza automáticamente la estructura del árbol de códigos en las páginas de Roam de manera nativa (ej: la página `[[cod/norm]]` tendrá bloques automáticos apuntando a `[[cod/norm/tension]]` y `[[cod/norm/afect]]`).
   * Atributo `Sincronizar jerarquía:: Sí/No` (por defecto: Sí).
   * Atributo `Prefijos a sincronizar:: cod, dim, cat` (por defecto: `cod, dim, cat`).
 
