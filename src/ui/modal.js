@@ -2742,11 +2742,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshCasos.title = "Refrescar Listas";
     btnRefreshCasos.onclick = (e) => {
         e.preventDefault();
-        refrescarCachesGlobales();
+        refrescarCacheCasos();
         renderTabCasos();
-        renderTabCodebook();
-        renderTabCategorias();
-        mostrarNotificacion("Listas refrescadas exitosamente.");
+        mostrarNotificacion("Casos refrescados exitosamente.");
     };
 
     controlsCasos.appendChild(btnGestionarCasos);
@@ -3162,7 +3160,12 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshCodebook.className = "cuali-btn-tool";
     btnRefreshCodebook.innerText = "🔄";
     btnRefreshCodebook.title = "Refrescar Listas";
-    btnRefreshCodebook.onclick = btnRefreshCasos.onclick;
+    btnRefreshCodebook.onclick = (e) => {
+        e.preventDefault();
+        refrescarCacheCodebook();
+        renderTabCodebook();
+        mostrarNotificacion("Codebook refrescado exitosamente.");
+    };
 
     controlsCodebook.appendChild(btnGestionarCodebook);
     controlsCodebook.appendChild(btnPivotGlobal);
@@ -3328,8 +3331,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshMemos.title = "Refrescar Memos";
     btnRefreshMemos.onclick = (e) => {
         e.preventDefault();
-        refrescarCachesGlobales();
+        refrescarCacheCodebook();
         renderTabMemos();
+        mostrarNotificacion("Memos refrescados exitosamente.");
     };
 
     controlsMemos.appendChild(btnExpandMemos);
@@ -3449,8 +3453,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshCategorias.title = "Refrescar Categorías";
     btnRefreshCategorias.onclick = (e) => {
         e.preventDefault();
-        refrescarCachesGlobales();
+        refrescarCacheCategorias();
         renderTabCategorias();
+        mostrarNotificacion("Categorías refrescadas exitosamente.");
     };
 
     controlsCategorias.appendChild(btnExpandCategorias);
@@ -3504,7 +3509,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                 }
                 await crearCategoriaRoam(normalized);
                 mostrarNotificacion("Categoría creada.");
-                refrescarCachesGlobales();
+                refrescarCacheCategorias();
                 renderTabCategorias();
             }
         });
@@ -3890,11 +3895,36 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         // 4. Prefijos a sincronizar
         const groupPrefijosSync = document.createElement("div");
         groupPrefijosSync.className = "cuali-config-group";
-        groupPrefijosSync.innerHTML = `
-            <label class="cuali-config-label">🏷️ Prefijos a sincronizar</label>
-            <input type="text" class="cuali-config-input" id="cuali-cfg-prefijos-sync" value="${config.prefijosSincronizacion.join(", ")}">
-            <div class="cuali-config-description">Prefijos o namespaces que se deben sincronizar, separados por comas (ej: 'cod, dim, cat').</div>
-        `;
+        
+        const labelPrefijos = document.createElement("label");
+        labelPrefijos.className = "cuali-config-label";
+        labelPrefijos.innerText = "🏷️ Prefijos a sincronizar";
+        groupPrefijosSync.appendChild(labelPrefijos);
+        
+        const textareaPrefijos = document.createElement("textarea");
+        textareaPrefijos.id = "cuali-cfg-prefijos-sync";
+        textareaPrefijos.className = "cuali-config-input";
+        textareaPrefijos.rows = "4";
+        textareaPrefijos.style.resize = "vertical";
+        textareaPrefijos.style.minHeight = "80px";
+        textareaPrefijos.style.marginTop = "6px";
+        textareaPrefijos.style.marginBottom = "8px";
+        textareaPrefijos.style.lineHeight = "1.8";
+        textareaPrefijos.style.padding = "10px";
+        textareaPrefijos.style.fontFamily = "monospace";
+        
+        textareaPrefijos.value = config.prefijosSincronizacion
+            .map(p => `[[${p}]]`)
+            .join("\n");
+        
+        groupPrefijosSync.appendChild(textareaPrefijos);
+        
+        const descPrefijos = document.createElement("div");
+        descPrefijos.className = "cuali-config-description";
+        descPrefijos.style.marginTop = "6px";
+        descPrefijos.innerText = "Páginas que se deben poblar automáticamente con sus citas y estructura (ej: 'cod', 'dim', 'cod/descarga').";
+        groupPrefijosSync.appendChild(descPrefijos);
+        
         container.appendChild(groupPrefijosSync);
         
         // 5. Actions (Save Button)
@@ -3913,8 +3943,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             const sufijoAnalisisVal = document.getElementById("cuali-cfg-sufijo").value.trim();
             const sincronizarJerarquiaVal = document.getElementById("cuali-cfg-sincronizar").checked;
             const prefijosSincronizacionVal = document.getElementById("cuali-cfg-prefijos-sync").value
-                .split(",")
-                .map(p => p.trim())
+                .split("\n")
+                .map(p => p.trim().replace(/^\[\[/, "").replace(/\]\]$/, "").trim())
                 .filter(p => p.length > 0);
                 
             if (!prefijoCasosVal || !sufijoAnalisisVal) {

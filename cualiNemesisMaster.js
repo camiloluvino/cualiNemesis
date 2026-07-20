@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-20 16:53:08
+﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-20 19:29:25
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -144,6 +144,201 @@ function nodoSeleccionadoOHijosSeleccionados(node) {
     return false;
 }
 
+function obtenerBloquesHijosConOrden(parentUid) {
+    const res = window.roamAlphaAPI.q(`
+        [:find ?uid ?str ?order
+         :in $ ?parent_uid
+         :where
+         [?parent :block/uid ?parent_uid]
+         [?parent :block/children ?b]
+         [?b :block/uid ?uid]
+         [?b :block/string ?str]
+         [?b :block/order ?order]]
+    `, parentUid);
+    
+    if (!res) return [];
+    
+    const blocks = res.map(r => ({
+        uid: r[0],
+        string: r[1] || "",
+        order: r[2]
+    }));
+    
+    blocks.sort((a, b) => a.order - b.order);
+    return blocks;
+}
+
+async function sincronizarArbolDiff(node, parentUid, order, numAbove = 0, numBelow = 0, plainText = false) {
+    const currentBlocks = obtenerBloquesHijosConOrden(parentUid);
+    const expectedString = `[[${node.fullName}]]`;
+    
+    let nodeUid = null;
+    let existingIndex = -1;
+    for (let i = 0; i < currentBlocks.length; i++) {
+        if (currentBlocks[i].string === expectedString) {
+            nodeUid = currentBlocks[i].uid;
+            existingIndex = i;
+            break;
+        }
+    }
+    
+    if (!nodeUid) {
+        nodeUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createBlock({
+            location: {"parent-uid": parentUid, order: order},
+            block: {string: expectedString, uid: nodeUid}
+        });
+        await sleep(50);
+    } else if (existingIndex !== order) {
+        window.roamAlphaAPI.moveBlock({
+            location: {"parent-uid": parentUid, order: order},
+            block: {uid: nodeUid}
+        });
+        await sleep(30);
+    }
+    
+    await sincronizarHijosDiff(node, nodeUid, numAbove, numBelow, plainText);
+}
+
+async function sincronizarHijosDiff(node, nodeBlockUid, numAbove, numBelow, plainText) {
+    const currentBlocks = obtenerBloquesHijosConOrden(nodeBlockUid);
+    
+    const expectedChildren = [];
+    
+    if (node.checked) {
+        for (const citeUid of node.cites) {
+            const context = obtenerContextoBloque(citeUid.uid, numAbove, numBelow);
+            if (context.length === 1 && !context[0].isContext) {
+                const blockStr = plainText ? (context[0].string || "") : `((${citeUid.uid}))`;
+                expectedChildren.push({ type: 'cite', expectedString: blockStr });
+            } else {
+                expectedChildren.push({ type: 'cite_context', expectedString: "Cita con contexto:", contextBlocks: context });
+            }
+        }
+    }
+    
+    const childNamesSorted = Object.keys(node.children).sort();
+    for (const childName of childNamesSorted) {
+        const childNode = node.children[childName];
+        if (nodoSeleccionadoOHijosSeleccionados(childNode)) {
+            expectedChildren.push({ type: 'node', expectedString: `[[${childNode.fullName}]]`, node: childNode });
+        }
+    }
+    
+    const currentMap = {};
+    const usedBlocks = new Set();
+    
+    for (const b of currentBlocks) {
+        if (!currentMap[b.string]) currentMap[b.string] = [];
+        currentMap[b.string].push(b);
+    }
+    
+    const matchedUids = [];
+    for (let i = 0; i < expectedChildren.length; i++) {
+        const expected = expectedChildren[i];
+        if (currentMap[expected.expectedString] && currentMap[expected.expectedString].length > 0) {
+            const b = currentMap[expected.expectedString].shift();
+            matchedUids[i] = b.uid;
+            usedBlocks.add(b.uid);
+        } else {
+            matchedUids[i] = null;
+        }
+    }
+    
+    for (const b of currentBlocks) {
+        if (!usedBlocks.has(b.uid)) {
+            window.roamAlphaAPI.deleteBlock({block: {uid: b.uid}});
+            await sleep(50);
+        }
+    }
+    
+    for (let i = 0; i < expectedChildren.length; i++) {
+        const expected = expectedChildren[i];
+        let blockUid = matchedUids[i];
+        
+        if (!blockUid) {
+            blockUid = window.roamAlphaAPI.util.generateUID();
+            window.roamAlphaAPI.createBlock({
+                location: {"parent-uid": nodeBlockUid, order: i},
+                block: {string: expected.expectedString, uid: blockUid}
+            });
+            await sleep(50);
+        } else {
+            window.roamAlphaAPI.moveBlock({
+                location: {"parent-uid": nodeBlockUid, order: i},
+                block: {uid: blockUid}
+            });
+            await sleep(30);
+        }
+        
+        if (expected.type === 'node') {
+            await sincronizarHijosDiff(expected.node, blockUid, numAbove, numBelow, plainText);
+        } else if (expected.type === 'cite_context') {
+            await sincronizarContextoRecursivo(expected.contextBlocks, blockUid, plainText);
+        }
+    }
+}
+
+async function sincronizarContextoRecursivo(contextBlocks, containerUid, plainText) {
+    const currentBlocks = obtenerBloquesHijosConOrden(containerUid);
+    
+    const expectedStrings = contextBlocks.map(b => {
+        if (plainText) {
+            const prefix = b.isContext ? "[Contexto] " : "[Cita] ";
+            return `${prefix}${b.string}`;
+        } else {
+            return `((${b.uid}))${b.isContext ? ' *(Contexto)*' : ''}`;
+        }
+    });
+    
+    const currentMap = {};
+    const usedBlocks = new Set();
+    
+    for (const b of currentBlocks) {
+        if (!currentMap[b.string]) currentMap[b.string] = [];
+        currentMap[b.string].push(b);
+    }
+    
+    const matchedUids = [];
+    for (let i = 0; i < expectedStrings.length; i++) {
+        const str = expectedStrings[i];
+        if (currentMap[str] && currentMap[str].length > 0) {
+            const b = currentMap[str].shift();
+            matchedUids[i] = b.uid;
+            usedBlocks.add(b.uid);
+        } else {
+            matchedUids[i] = null;
+        }
+    }
+    
+    for (const b of currentBlocks) {
+        if (!usedBlocks.has(b.uid)) {
+            window.roamAlphaAPI.deleteBlock({block: {uid: b.uid}});
+            await sleep(50);
+        }
+    }
+    
+    for (let i = 0; i < expectedStrings.length; i++) {
+        const str = expectedStrings[i];
+        let blockUid = matchedUids[i];
+        
+        if (!blockUid) {
+            blockUid = window.roamAlphaAPI.util.generateUID();
+            window.roamAlphaAPI.createBlock({
+                location: {"parent-uid": containerUid, order: i},
+                block: {string: str, uid: blockUid}
+            });
+            await sleep(50);
+        } else {
+            window.roamAlphaAPI.moveBlock({
+                location: {"parent-uid": containerUid, order: i},
+                block: {uid: blockUid}
+            });
+            await sleep(30);
+        }
+    }
+}
+
 async function crearBloquesRecursivo(node, parentUid, order, numAbove = 0, numBelow = 0, plainText = false) {
     const nodeUid = window.roamAlphaAPI.util.generateUID();
     window.roamAlphaAPI.createBlock({
@@ -247,6 +442,9 @@ function obtenerConfiguracionPlugin() {
 
     const bloques = obtenerBloquesDePagina(configPageUid) || [];
     const config = { ...defaultConfig };
+    
+    let prefijosBlockUid = null;
+    let prefijosTextoPadre = "";
 
     bloques.forEach(b => {
         const str = b[1] ? b[1].trim() : "";
@@ -267,13 +465,28 @@ function obtenerConfiguracionPlugin() {
             config.sincronizarJerarquia = (val === "sí" || val === "si" || val === "yes" || val === "true");
         }
 
-        const matchPrefijosSync = str.match(/^Prefijos a sincronizar::\s*(.+)$/i);
+        const matchPrefijosSync = str.match(/^Prefijos a sincronizar::\s*(.*)$/is);
         if (matchPrefijosSync) {
-            config.prefijosSincronizacion = matchPrefijosSync[1].split(",")
-                .map(p => p.trim().toLowerCase())
-                .filter(p => p.length > 0);
+            prefijosBlockUid = b[0];
+            prefijosTextoPadre = matchPrefijosSync[1];
         }
     });
+
+    if (prefijosBlockUid) {
+        const hijos = obtenerBloquesHijosConOrden(prefijosBlockUid);
+        if (hijos && hijos.length > 0) {
+            config.prefijosSincronizacion = hijos
+                .map(h => h.string.trim().replace(/^\[\[/, "").replace(/\]\]$/, "").trim().toLowerCase())
+                .filter(p => p.length > 0);
+        } else if (prefijosTextoPadre) {
+            // Retrocompatibilidad
+            config.prefijosSincronizacion = prefijosTextoPadre.split(/[\n,]+/)
+                .map(p => p.trim().replace(/^\[\[/, "").replace(/\]\]$/, "").trim().toLowerCase())
+                .filter(p => p.length > 0);
+        } else {
+            config.prefijosSincronizacion = [];
+        }
+    }
 
     cacheConfiguracion = config;
     return cacheConfiguracion;
@@ -295,7 +508,7 @@ async function guardarConfiguracionPlugin(nuevaConfig) {
         prefijoCasos: `Prefijo de casos:: ${nuevaConfig.prefijoCasos}`,
         sufijoAnalisis: `Sufijo de análisis:: ${nuevaConfig.sufijoAnalisis}`,
         sincronizarJerarquia: `Sincronizar jerarquía:: ${nuevaConfig.sincronizarJerarquia ? 'sí' : 'no'}`,
-        prefijosSincronizacion: `Prefijos a sincronizar:: ${nuevaConfig.prefijosSincronizacion.join(", ")}`
+        prefijosSincronizacion: `Prefijos a sincronizar::`
     };
 
     const keysMap = {
@@ -318,15 +531,36 @@ async function guardarConfiguracionPlugin(nuevaConfig) {
 
     let order = 0;
     for (const [key, text] of Object.entries(configMap)) {
-        if (blockUids[key]) {
-            window.roamAlphaAPI.updateBlock({block: {uid: blockUids[key], string: text}});
+        let currentUid = blockUids[key];
+        if (currentUid) {
+            window.roamAlphaAPI.updateBlock({block: {uid: currentUid, string: text}});
         } else {
-            const newUid = window.roamAlphaAPI.util.generateUID();
+            currentUid = window.roamAlphaAPI.util.generateUID();
             window.roamAlphaAPI.createBlock({
                 location: { "parent-uid": configPageUid, order: order },
-                block: { string: text, uid: newUid }
+                block: { string: text, uid: currentUid }
             });
         }
+        
+        // Si es la sincronización de prefijos, manejar los bloques hijos (viñetas)
+        if (key === 'prefijosSincronizacion') {
+            await sleep(50);
+            const hijosExistentes = obtenerBloquesHijosConOrden(currentUid);
+            for (const hijo of hijosExistentes) {
+                window.roamAlphaAPI.deleteBlock({block: {uid: hijo.uid}});
+            }
+            await sleep(50);
+            let childOrder = 0;
+            for (const p of nuevaConfig.prefijosSincronizacion) {
+                window.roamAlphaAPI.createBlock({
+                    location: { "parent-uid": currentUid, order: childOrder },
+                    block: { string: `[[${p}]]` }
+                });
+                childOrder++;
+                await sleep(20);
+            }
+        }
+        
         order++;
         await sleep(50);
     }
@@ -392,8 +626,22 @@ function obtenerCodebookGlobal() {
     cacheCodebook = grouped;
     return cacheCodebook;
 }
+function refrescarCacheCasos() {
+    cacheCasos = null;
+    return obtenerCasosGlobal();
+}
 
-function refrescarCachesGlobales(sincronizar = true) {
+function refrescarCacheCodebook() {
+    cacheCodebook = null;
+    return obtenerCodebookGlobal();
+}
+
+function refrescarCacheCategorias() {
+    cacheCategorias = null;
+    return leerCategoriasDesdeRoam();
+}
+
+function refrescarCachesGlobales(sincronizar = false) {
     cacheCasos = null;
     cacheCodebook = null;
     cacheCategorias = null;
@@ -484,16 +732,8 @@ async function sincronizarJerarquiaRoam() {
             await sleep(100);
         }
 
-        // Limpiar la página por completo borrando bloques de primer nivel
-        const currentBlocks = obtenerBloquesDirectosDePagina(pageUid) || [];
-        for (const b of currentBlocks) {
-            const buid = b[0];
-            window.roamAlphaAPI.deleteBlock({block: {uid: buid}});
-            await sleep(50);
-        }
-
-        // Re-crear el árbol recursivamente en la página
-        await crearBloquesRecursivo(groupClone, pageUid, 0, 0, 0, false);
+        // Antes borrábamos todo, ahora usamos diff-and-patch
+        await sincronizarArbolDiff(groupClone, pageUid, 0, 0, 0, false);
     }
 }
 
@@ -3996,11 +4236,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshCasos.title = "Refrescar Listas";
     btnRefreshCasos.onclick = (e) => {
         e.preventDefault();
-        refrescarCachesGlobales();
+        refrescarCacheCasos();
         renderTabCasos();
-        renderTabCodebook();
-        renderTabCategorias();
-        mostrarNotificacion("Listas refrescadas exitosamente.");
+        mostrarNotificacion("Casos refrescados exitosamente.");
     };
 
     controlsCasos.appendChild(btnGestionarCasos);
@@ -4416,7 +4654,12 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshCodebook.className = "cuali-btn-tool";
     btnRefreshCodebook.innerText = "🔄";
     btnRefreshCodebook.title = "Refrescar Listas";
-    btnRefreshCodebook.onclick = btnRefreshCasos.onclick;
+    btnRefreshCodebook.onclick = (e) => {
+        e.preventDefault();
+        refrescarCacheCodebook();
+        renderTabCodebook();
+        mostrarNotificacion("Codebook refrescado exitosamente.");
+    };
 
     controlsCodebook.appendChild(btnGestionarCodebook);
     controlsCodebook.appendChild(btnPivotGlobal);
@@ -4582,8 +4825,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshMemos.title = "Refrescar Memos";
     btnRefreshMemos.onclick = (e) => {
         e.preventDefault();
-        refrescarCachesGlobales();
+        refrescarCacheCodebook();
         renderTabMemos();
+        mostrarNotificacion("Memos refrescados exitosamente.");
     };
 
     controlsMemos.appendChild(btnExpandMemos);
@@ -4703,8 +4947,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnRefreshCategorias.title = "Refrescar Categorías";
     btnRefreshCategorias.onclick = (e) => {
         e.preventDefault();
-        refrescarCachesGlobales();
+        refrescarCacheCategorias();
         renderTabCategorias();
+        mostrarNotificacion("Categorías refrescadas exitosamente.");
     };
 
     controlsCategorias.appendChild(btnExpandCategorias);
@@ -4758,7 +5003,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                 }
                 await crearCategoriaRoam(normalized);
                 mostrarNotificacion("Categoría creada.");
-                refrescarCachesGlobales();
+                refrescarCacheCategorias();
                 renderTabCategorias();
             }
         });
@@ -5144,11 +5389,36 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         // 4. Prefijos a sincronizar
         const groupPrefijosSync = document.createElement("div");
         groupPrefijosSync.className = "cuali-config-group";
-        groupPrefijosSync.innerHTML = `
-            <label class="cuali-config-label">🏷️ Prefijos a sincronizar</label>
-            <input type="text" class="cuali-config-input" id="cuali-cfg-prefijos-sync" value="${config.prefijosSincronizacion.join(", ")}">
-            <div class="cuali-config-description">Prefijos o namespaces que se deben sincronizar, separados por comas (ej: 'cod, dim, cat').</div>
-        `;
+        
+        const labelPrefijos = document.createElement("label");
+        labelPrefijos.className = "cuali-config-label";
+        labelPrefijos.innerText = "🏷️ Prefijos a sincronizar";
+        groupPrefijosSync.appendChild(labelPrefijos);
+        
+        const textareaPrefijos = document.createElement("textarea");
+        textareaPrefijos.id = "cuali-cfg-prefijos-sync";
+        textareaPrefijos.className = "cuali-config-input";
+        textareaPrefijos.rows = "4";
+        textareaPrefijos.style.resize = "vertical";
+        textareaPrefijos.style.minHeight = "80px";
+        textareaPrefijos.style.marginTop = "6px";
+        textareaPrefijos.style.marginBottom = "8px";
+        textareaPrefijos.style.lineHeight = "1.8";
+        textareaPrefijos.style.padding = "10px";
+        textareaPrefijos.style.fontFamily = "monospace";
+        
+        textareaPrefijos.value = config.prefijosSincronizacion
+            .map(p => `[[${p}]]`)
+            .join("\n");
+        
+        groupPrefijosSync.appendChild(textareaPrefijos);
+        
+        const descPrefijos = document.createElement("div");
+        descPrefijos.className = "cuali-config-description";
+        descPrefijos.style.marginTop = "6px";
+        descPrefijos.innerText = "Páginas que se deben poblar automáticamente con sus citas y estructura (ej: 'cod', 'dim', 'cod/descarga').";
+        groupPrefijosSync.appendChild(descPrefijos);
+        
         container.appendChild(groupPrefijosSync);
         
         // 5. Actions (Save Button)
@@ -5167,8 +5437,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             const sufijoAnalisisVal = document.getElementById("cuali-cfg-sufijo").value.trim();
             const sincronizarJerarquiaVal = document.getElementById("cuali-cfg-sincronizar").checked;
             const prefijosSincronizacionVal = document.getElementById("cuali-cfg-prefijos-sync").value
-                .split(",")
-                .map(p => p.trim())
+                .split("\n")
+                .map(p => p.trim().replace(/^\[\[/, "").replace(/\]\]$/, "").trim())
                 .filter(p => p.length > 0);
                 
             if (!prefijoCasosVal || !sufijoAnalisisVal) {
