@@ -291,7 +291,7 @@ function obtenerCodebookGlobal() {
     return cacheCodebook;
 }
 
-function refrescarCachesGlobales() {
+function refrescarCachesGlobales(sincronizar = true) {
     cacheCasos = null;
     cacheCodebook = null;
     cacheCategorias = null;
@@ -302,9 +302,13 @@ function refrescarCachesGlobales() {
     leerCategoriasDesdeRoam();
     
     // Ejecutar sincronización de jerarquía en segundo plano de manera asíncrona
-    sincronizarJerarquiaRoam().catch(err => {
-        console.error("Error al sincronizar jerarquía de códigos:", err);
-    });
+    // (solo si sincronizar=true; operaciones como borrar una categoría no afectan
+    //  la jerarquía cod/dim/cat y no necesitan reconstruir esas páginas)
+    if (sincronizar) {
+        sincronizarJerarquiaRoam().catch(err => {
+            console.error("Error al sincronizar jerarquía de códigos:", err);
+        });
+    }
 }
 
 function obtenerBloquesDirectosDePagina(pageUid) {
@@ -624,11 +628,17 @@ async function crearCategoriaRoam(nombre) {
     return pageUid;
 }
 
-async function eliminarCategoriaRoam(uid) {
+async function eliminarCategoriaRoam(uid, titulo) {
     if (!uid) return;
+    // Obtener título antes de borrar si no se proporcionó
+    if (!titulo) {
+        const res = window.roamAlphaAPI.q(`[:find ?t :in $ ?u :where [?p :block/uid ?u] [?p :node/title ?t]]`, uid);
+        titulo = (res && res.length > 0) ? res[0][0] : `(uid: ${uid})`;
+    }
     window.roamAlphaAPI.deletePage({page: {uid: uid}});
     await sleep(100);
     cacheCategorias = null;
+    await registrarEliminacion(titulo, "Categoría");
 }
 
 async function actualizarCodigosCategoriaRoam(pageUid, codigosDeseados) {
@@ -721,6 +731,69 @@ async function desvincularCodigosDeCategoria(pageUid, codeNames) {
     const updatedCodes = currentCodes.filter(c => !codeNames.includes(c));
     
     await actualizarCodigosCategoriaRoam(pageUid, updatedCodes);
+}
+
+const PAGINA_REGISTRO_ELIMINACIONES = "cualiNemesis/Registro de eliminaciones";
+
+async function registrarEliminacion(titulo, tipo) {
+    if (!titulo) return;
+    
+    let pageUid = obtenerUIDPaginaPorTitulo(PAGINA_REGISTRO_ELIMINACIONES);
+    if (!pageUid) {
+        pageUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createPage({page: {title: PAGINA_REGISTRO_ELIMINACIONES, uid: pageUid}});
+        await sleep(100);
+    }
+    
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString("es-CL", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const hora = ahora.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+    // Texto plano sin corchetes para no generar referencias
+    const entrada = `${fecha} ${hora} — ${tipo}: ${titulo}`;
+    
+    // Contar bloques existentes para insertar al inicio (order 0 = más reciente arriba)
+    const blockUid = window.roamAlphaAPI.util.generateUID();
+    window.roamAlphaAPI.createBlock({
+        location: {"parent-uid": pageUid, order: 0},
+        block: {string: entrada, uid: blockUid}
+    });
+    await sleep(50);
+}
+
+async function registrarEliminacionMultiple(titulos, tipo) {
+    if (!titulos || titulos.length === 0) return;
+    
+    let pageUid = obtenerUIDPaginaPorTitulo(PAGINA_REGISTRO_ELIMINACIONES);
+    if (!pageUid) {
+        pageUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createPage({page: {title: PAGINA_REGISTRO_ELIMINACIONES, uid: pageUid}});
+        await sleep(100);
+    }
+    
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString("es-CL", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const hora = ahora.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+    
+    // Bloque padre con resumen
+    const parentBlockUid = window.roamAlphaAPI.util.generateUID();
+    const resumen = `${fecha} ${hora} — ${tipo} (${titulos.length} páginas eliminadas)`;
+    window.roamAlphaAPI.createBlock({
+        location: {"parent-uid": pageUid, order: 0},
+        block: {string: resumen, uid: parentBlockUid}
+    });
+    await sleep(50);
+    
+    // Sub-bloques con cada título (texto plano)
+    let order = 0;
+    for (const titulo of titulos) {
+        const childUid = window.roamAlphaAPI.util.generateUID();
+        window.roamAlphaAPI.createBlock({
+            location: {"parent-uid": parentBlockUid, order: order},
+            block: {string: titulo, uid: childUid}
+        });
+        order++;
+        await sleep(30);
+    }
 }
 
 

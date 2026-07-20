@@ -328,16 +328,23 @@ function mostrarModalGestion(nodos, scope, onComplete) {
             progressBar.style.width = `99%`;
             await sleep(200);
 
+            const paginasEliminadas = [];
             for (const catName of uniqueCodes) {
                 try {
                     const pageUid = obtenerUIDPaginaPorTitulo(catName);
                     if (pageUid) {
                         await eliminarPaginaRoam(pageUid);
+                        paginasEliminadas.push(catName);
                     }
                 } catch (err) {
                     console.error(`Error deleting page ${catName}:`, err);
                 }
                 await sleep(50);
+            }
+            
+            // Registrar páginas eliminadas en el log
+            if (paginasEliminadas.length > 0) {
+                await registrarEliminacionMultiple(paginasEliminadas, "Gestión de códigos");
             }
         }
 
@@ -1041,7 +1048,7 @@ function renderCategoryNodeHTML(node, depth = 0) {
             if (confirm(`¿Estás seguro de que deseas eliminar la categoría "${node.name}"? Esta acción eliminará la página de la categoría [[${node.fullName}]] en Roam, pero no borrará los códigos ni las citas.`)) {
                 await eliminarCategoriaRoam(node.uid);
                 mostrarNotificacion("Categoría eliminada.");
-                refrescarCachesGlobales();
+                refrescarCachesGlobales(false);
                 renderTabCategorias();
             }
         };
@@ -3945,6 +3952,43 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         
         actionsDiv.appendChild(btnSave);
         container.appendChild(actionsDiv);
+        
+        // 6. Registro de eliminaciones
+        const groupRegistro = document.createElement("div");
+        groupRegistro.className = "cuali-config-group";
+        groupRegistro.style.borderTop = "1px solid rgba(147, 161, 161, 0.15)";
+        groupRegistro.style.paddingTop = "16px";
+        groupRegistro.style.marginTop = "8px";
+        
+        const labelRegistro = document.createElement("label");
+        labelRegistro.className = "cuali-config-label";
+        labelRegistro.innerText = "🗂️ Registro de eliminaciones";
+        groupRegistro.appendChild(labelRegistro);
+        
+        const descRegistro = document.createElement("div");
+        descRegistro.className = "cuali-config-description";
+        descRegistro.innerText = "Historial de páginas eliminadas por el plugin. Útil para auditar cambios y recuperar títulos si fuera necesario.";
+        groupRegistro.appendChild(descRegistro);
+        
+        const btnVerRegistro = document.createElement("button");
+        btnVerRegistro.className = "cuali-btn cuali-btn-tool";
+        btnVerRegistro.style.marginTop = "8px";
+        btnVerRegistro.style.padding = "6px 14px";
+        btnVerRegistro.style.fontSize = "13px";
+        btnVerRegistro.innerText = "📋 Ver registro";
+        btnVerRegistro.title = "Abrir página cualiNemesis/Registro de eliminaciones en Roam";
+        btnVerRegistro.onclick = (e) => {
+            e.preventDefault();
+            const uid = obtenerUIDPaginaPorTitulo("cualiNemesis/Registro de eliminaciones");
+            if (uid) {
+                window.roamAlphaAPI.ui.mainWindow.openPage({page: {uid: uid}});
+            } else {
+                mostrarNotificacion("No hay registro de eliminaciones aún. Se creará automáticamente cuando se elimine una página.");
+            }
+        };
+        groupRegistro.appendChild(btnVerRegistro);
+        
+        container.appendChild(groupRegistro);
         
         tabConfiguracion.appendChild(container);
     }

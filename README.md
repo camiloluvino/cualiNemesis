@@ -66,10 +66,12 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Modo Desenlazar**: Remueve los corchetes `[[  ]]` de las referencias, convirtiéndolas en texto plano (ej: `[[cod/afect]]` → `cod/afect`).
 * **Modo Eliminar (Auditable)**: Reemplaza las referencias seleccionadas con la etiqueta de página `[[CÓDIGO ELIMINADO]]`. Esto conserva la estructura de texto íntegra de la entrevista original y te permite usar los backlinks nativos de Roam sobre la página `[[CÓDIGO ELIMINADO]]` para auditar exactamente qué codificaciones fueron removidas y en qué bloques.
 * **Borrado de Páginas**: Opción de eliminar la página correspondiente en el grafo de Roam para cada código borrado.
+* **Registro de Auditoría Silencioso**: Cada página de categoría o código eliminado por el plugin se registra de forma automática en la página `cualiNemesis/Registro de eliminaciones` con marca de tiempo y en formato de texto plano para evitar la creación indeseada de páginas fantasmas.
 * **Barra de Progreso y Rate Limiting**: Ejecuta los cambios de forma secuencial y espaciada con una barra de progreso en tiempo real para evitar errores de API en Roam.
 
 ### 6. ⚙️ Configuración Dinámica y Bidireccional (v0.12.0)
 * **Pestaña de configuración integrada:** Se añadió una pestaña dedicada de "Configuración" en el panel de CualiNemesis que permite editar los parámetros sin salir de la aplicación.
+* **Acceso Directo al Registro**: Incluye un botón "📋 Ver registro" para navegar instantáneamente a la página del historial de eliminaciones.
 * **Sincronización bidireccional:** Lee y escribe directamente en la página `cualiNemesis/Configuración` de Roam. Al guardar la configuración en la app, se actualizan los bloques correspondientes en Roam y se recarga en caliente la interfaz del plugin.
 * **Prefijo de casos dinámico:** Personaliza la etiqueta para agrupar tus casos (por defecto `entrevistadx`).
 * **Sufijo de análisis dinámico:** Define la subruta de las transcripciones que contienen el material codificado (por defecto `transcripción/a analizar`), con tolerancia inteligente de tildes (ej: `aAnalizar`).
