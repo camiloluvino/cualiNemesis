@@ -119,13 +119,21 @@ function mostrarModalGestion(nodos, scope, onComplete) {
 
     const titleEl = document.createElement("h4");
     titleEl.className = "cn-gestion-title";
-    titleEl.innerHTML = "⚠️ Gestión de Categorías Seleccionadas";
+    if (scope === "limpieza") {
+        titleEl.innerHTML = "🧹 Limpieza de Códigos Muertos Seleccionados";
+    } else {
+        titleEl.innerHTML = "⚠️ Gestión de Categorías Seleccionadas";
+    }
     mContainer.appendChild(titleEl);
 
     const descEl = document.createElement("div");
     descEl.style.fontSize = "13px";
     descEl.style.lineHeight = "1.5";
-    descEl.innerHTML = `Has seleccionado <strong>${uniqueCodes.size}</strong> categorías con un total de <strong>${totalCitas}</strong> citas registradas en <strong>${sourcesSet.size}</strong> páginas de codificación.`;
+    if (scope === "limpieza") {
+        descEl.innerHTML = `Has seleccionado <strong>${uniqueCodes.size}</strong> códigos de último nivel (hojas) sin citas en entrevistas.`;
+    } else {
+        descEl.innerHTML = `Has seleccionado <strong>${uniqueCodes.size}</strong> categorías con un total de <strong>${totalCitas}</strong> citas registradas en <strong>${sourcesSet.size}</strong> páginas de codificación.`;
+    }
     mContainer.appendChild(descEl);
 
     // List of selected categories
@@ -179,6 +187,16 @@ function mostrarModalGestion(nodos, scope, onComplete) {
         <input type="checkbox" id="cn-delete-pages" style="cursor: pointer;">
         <span>También eliminar las páginas del grafo de Roam (${uniqueCodes.size} páginas)</span>
     `;
+
+    if (scope === "limpieza") {
+        optB.classList.add("active");
+        optA.classList.remove("active");
+        optB.querySelector("input").checked = true;
+        optA.querySelector("input").checked = false;
+        extraCheckboxContainer.style.display = "flex";
+        const deletePagesInput = extraCheckboxContainer.querySelector("input");
+        if (deletePagesInput) deletePagesInput.checked = true;
+    }
 
     optA.onclick = () => {
         optA.classList.add("active");
@@ -323,7 +341,7 @@ function mostrarModalGestion(nodos, scope, onComplete) {
         }
 
         // 3. Optional: Delete pages from Roam
-        if (!unlinkMode && deletePagesChecked) {
+        if (deletePagesChecked) {
             progressText.innerText = `Eliminando páginas del grafo...`;
             progressBar.style.width = `99%`;
             await sleep(200);
@@ -1700,6 +1718,24 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             display: inline-block;
             border: 1px solid rgba(38, 139, 210, 0.2);
         }
+        .cn-summary-banner {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            background: rgba(38, 139, 210, 0.05);
+            border: 1px solid rgba(38, 139, 210, 0.2);
+            border-radius: 8px;
+            padding: 8px 14px;
+            margin-top: 4px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--sol-base00);
+        }
+        .cn-summary-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .cuali-tag-more {
             background-color: rgba(147, 161, 161, 0.05);
             color: var(--sol-base01);
@@ -2358,6 +2394,10 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnTabConfiguracion.className = "cuali-tab-btn";
     btnTabConfiguracion.innerText = "Configuración";
 
+    const btnTabLimpieza = document.createElement("button");
+    btnTabLimpieza.className = "cuali-tab-btn";
+    btnTabLimpieza.innerText = "Limpieza";
+
     const btnTabMemos = document.createElement("button");
     btnTabMemos.className = "cuali-tab-btn";
     btnTabMemos.innerText = "Memos";
@@ -2367,6 +2407,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabsLeft.appendChild(btnTabCodebook);
     tabsLeft.appendChild(btnTabCategorias);
     tabsLeft.appendChild(btnTabConfiguracion);
+    tabsLeft.appendChild(btnTabLimpieza);
     tabsLeft.appendChild(btnTabMemos);
     tabsNav.appendChild(tabsLeft);
 
@@ -2386,6 +2427,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const controlsConfiguracion = document.createElement("div");
     controlsConfiguracion.className = "cuali-tabs-right";
 
+    const controlsLimpieza = document.createElement("div");
+    controlsLimpieza.className = "cuali-tabs-right";
+
     const controlsMemos = document.createElement("div");
     controlsMemos.className = "cuali-tabs-right";
 
@@ -2394,6 +2438,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     tabsNav.appendChild(controlsCodebook);
     tabsNav.appendChild(controlsCategorias);
     tabsNav.appendChild(controlsConfiguracion);
+    tabsNav.appendChild(controlsLimpieza);
     tabsNav.appendChild(controlsMemos);
     
     modal.appendChild(tabsNav);
@@ -2413,6 +2458,9 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const tabConfiguracion = document.createElement("div");
     tabConfiguracion.className = "cuali-tab-content";
+
+    const tabLimpieza = document.createElement("div");
+    tabLimpieza.className = "cuali-tab-content";
 
     const tabMemos = document.createElement("div");
     tabMemos.className = "cuali-tab-content";
@@ -3974,6 +4022,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                 renderTabCodebook(true);
                 renderTabMemos();
                 renderTabCategorias();
+                renderTabLimpieza(true);
                 
             } catch (err) {
                 console.error(err);
@@ -4027,18 +4076,353 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         tabConfiguracion.appendChild(container);
     }
 
+    // --- POPULATE TAB: LIMPIEZA ---
+    const btnSearchToggleLimpieza = document.createElement("button");
+    btnSearchToggleLimpieza.className = "cuali-btn-tool";
+    btnSearchToggleLimpieza.innerText = "🔍";
+    btnSearchToggleLimpieza.title = "Buscar código muerto";
+    btnSearchToggleLimpieza.onclick = (e) => {
+        e.preventDefault();
+        if (searchLimpiezaInput.style.display === "none" || !searchLimpiezaInput.style.display) {
+            searchLimpiezaInput.style.display = "block";
+            searchLimpiezaInput.focus();
+        } else {
+            searchLimpiezaInput.style.display = "none";
+            searchLimpiezaInput.value = "";
+            filtrarLimpieza(listLimpiezaContainer, "");
+        }
+    };
+
+    const btnRefreshLimpieza = document.createElement("button");
+    btnRefreshLimpieza.className = "cuali-btn-tool";
+    btnRefreshLimpieza.innerText = "🔄";
+    btnRefreshLimpieza.title = "Recargar cachés y re-evaluar códigos muertos";
+    btnRefreshLimpieza.onclick = (e) => {
+        e.preventDefault();
+        refrescarCachesGlobales();
+        renderTabLimpieza(true);
+        mostrarNotificacion("Caché actualizada y códigos re-evaluados.");
+    };
+
+    controlsLimpieza.appendChild(btnSearchToggleLimpieza);
+    controlsLimpieza.appendChild(btnRefreshLimpieza);
+
+    const searchLimpiezaInput = document.createElement("input");
+    searchLimpiezaInput.type = "text";
+    searchLimpiezaInput.className = "cuali-search-input";
+    searchLimpiezaInput.placeholder = "🔍 Filtrar códigos muertos...";
+    searchLimpiezaInput.style.display = "none";
+    searchLimpiezaInput.style.marginBottom = "6px";
+    searchLimpiezaInput.oninput = () => {
+        filtrarLimpieza(listLimpiezaContainer, searchLimpiezaInput.value);
+    };
+
+    const summaryLimpiezaBanner = document.createElement("div");
+    summaryLimpiezaBanner.className = "cn-summary-banner";
+
+    const tableHeaderLimpieza = document.createElement("div");
+    tableHeaderLimpieza.className = "cuali-table-header";
+    tableHeaderLimpieza.innerHTML = `
+        <span style="width: 26px; text-align: center; margin-right: 10px;">☐</span>
+        <span class="col-code">CÓDIGO MUERTO</span>
+        <span class="col-sources" style="width: 220px;">NAMESPACE PADRE</span>
+        <span style="width: 90px; text-align: center;">ACCIONES</span>
+    `;
+
+    const listLimpiezaContainer = document.createElement("div");
+    listLimpiezaContainer.className = "cuali-list-box cuali-tree-container";
+
+    const infoNoteLimpieza = document.createElement("div");
+    infoNoteLimpieza.className = "cn-info-note";
+    infoNoteLimpieza.innerText = "ℹ️ Se muestran únicamente códigos de último nivel (nodos hoja) sin citas en ninguna entrevista activa. Los códigos agrupadores no se incluyen.";
+
+    const buttonsLimpieza = document.createElement("div");
+    buttonsLimpieza.className = "cuali-buttons";
+
+    const btnSelectAllLimpieza = document.createElement("button");
+    btnSelectAllLimpieza.className = "cuali-btn cuali-btn-tool";
+    btnSelectAllLimpieza.innerText = "☑ Seleccionar todos";
+    btnSelectAllLimpieza.onclick = (e) => {
+        e.preventDefault();
+        const lis = Array.from(listLimpiezaContainer.querySelectorAll("li")).filter(li => li.style.display !== "none");
+        lis.forEach(li => {
+            const chk = li.querySelector("input[type='checkbox']");
+            if (chk) chk.checked = true;
+        });
+        deadCodesList.forEach(item => {
+            const li = Array.from(listLimpiezaContainer.querySelectorAll("li")).find(l => l.querySelector(".col-code") && l.querySelector(".col-code").innerText === item.fullName);
+            if (li && li.style.display !== "none") {
+                item.checked = true;
+            }
+        });
+    };
+
+    const btnDeselectAllLimpieza = document.createElement("button");
+    btnDeselectAllLimpieza.className = "cuali-btn cuali-btn-tool";
+    btnDeselectAllLimpieza.innerText = "☐ Deseleccionar";
+    btnDeselectAllLimpieza.onclick = (e) => {
+        e.preventDefault();
+        const chks = listLimpiezaContainer.querySelectorAll("input[type='checkbox']");
+        chks.forEach(chk => chk.checked = false);
+        deadCodesList.forEach(item => item.checked = false);
+    };
+
+    const btnDeleteSelectedLimpieza = document.createElement("button");
+    btnDeleteSelectedLimpieza.className = "cuali-btn";
+    btnDeleteSelectedLimpieza.style.backgroundColor = "rgba(220, 50, 47, 0.08)";
+    btnDeleteSelectedLimpieza.style.border = "1px solid #dc322f";
+    btnDeleteSelectedLimpieza.style.color = "#dc322f";
+    btnDeleteSelectedLimpieza.innerText = "🗑️ Eliminar seleccionados";
+    btnDeleteSelectedLimpieza.onclick = (e) => {
+        e.preventDefault();
+        const selectedItems = deadCodesList.filter(item => item.checked);
+        if (selectedItems.length === 0) {
+            mostrarNotificacion("Selecciona al menos un código muerto para eliminar.");
+            return;
+        }
+        mostrarModalGestion(selectedItems, "limpieza", () => {
+            renderTabLimpieza(true);
+        });
+    };
+
+    const btnCopyListLimpieza = document.createElement("button");
+    btnCopyListLimpieza.className = "cuali-btn cuali-btn-tool";
+    btnCopyListLimpieza.innerText = "📋 Copiar lista";
+    btnCopyListLimpieza.onclick = (e) => {
+        e.preventDefault();
+        if (!deadCodesList || deadCodesList.length === 0) {
+            mostrarNotificacion("No hay códigos muertos para copiar.");
+            return;
+        }
+        const textToCopy = deadCodesList.map(item => item.fullName).join("\n");
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            mostrarNotificacion(`Se han copiado ${deadCodesList.length} códigos muertos al portapapeles.`);
+        }).catch(err => {
+            console.error("Error al copiar al portapapeles:", err);
+            mostrarNotificacion("Error al copiar al portapapeles.");
+        });
+    };
+
+    buttonsLimpieza.appendChild(btnSelectAllLimpieza);
+    buttonsLimpieza.appendChild(btnDeselectAllLimpieza);
+    buttonsLimpieza.appendChild(btnDeleteSelectedLimpieza);
+    buttonsLimpieza.appendChild(btnCopyListLimpieza);
+
+    tabLimpieza.appendChild(searchLimpiezaInput);
+    tabLimpieza.appendChild(summaryLimpiezaBanner);
+    tabLimpieza.appendChild(tableHeaderLimpieza);
+    tabLimpieza.appendChild(listLimpiezaContainer);
+    tabLimpieza.appendChild(infoNoteLimpieza);
+    tabLimpieza.appendChild(buttonsLimpieza);
+
+    let deadCodesList = [];
+
+    function recolectarCodigosMuertos(node, deadCodes = []) {
+        if (!node) return deadCodes;
+        const isLeaf = Object.keys(node.children).length === 0;
+        if (isLeaf) {
+            if (node.fullName && (!node.cites || node.cites.length === 0)) {
+                const config = obtenerConfiguracionPlugin();
+                const casePrefix = (config.prefijoCasos || "entrevistadx").toLowerCase();
+                const lowerFull = node.fullName.toLowerCase();
+                
+                const isMemo = lowerFull.startsWith("memo/") || lowerFull.startsWith("memos/");
+                const isCase = lowerFull.startsWith(casePrefix + "/");
+                
+                if (!isMemo && !isCase) {
+                    const parts = node.fullName.split('/');
+                    const parentNamespace = parts.length > 1 ? parts.slice(0, -1).join('/') : "-";
+                    
+                    deadCodes.push({
+                        node: node,
+                        fullName: node.fullName,
+                        name: node.name,
+                        parentNamespace: parentNamespace,
+                        cites: [],
+                        checked: false
+                    });
+                }
+            }
+        } else {
+            for (const childName in node.children) {
+                recolectarCodigosMuertos(node.children[childName], deadCodes);
+            }
+        }
+        return deadCodes;
+    }
+
+    function contarHojasTotales(node) {
+        if (!node) return 0;
+        const isLeaf = Object.keys(node.children).length === 0;
+        if (isLeaf) {
+            if (node.fullName) {
+                const config = obtenerConfiguracionPlugin();
+                const casePrefix = (config.prefijoCasos || "entrevistadx").toLowerCase();
+                const lowerFull = node.fullName.toLowerCase();
+                const isMemo = lowerFull.startsWith("memo/") || lowerFull.startsWith("memos/");
+                const isCase = lowerFull.startsWith(casePrefix + "/");
+                if (!isMemo && !isCase) return 1;
+            }
+            return 0;
+        }
+        let sum = 0;
+        for (const childName in node.children) {
+            sum += contarHojasTotales(node.children[childName]);
+        }
+        return sum;
+    }
+
+    function filtrarLimpieza(container, query) {
+        const lis = container.querySelectorAll('li');
+        const q = query.toLowerCase().trim();
+        lis.forEach(li => {
+            if (!q || li.innerText.toLowerCase().includes(q)) {
+                li.style.display = "flex";
+            } else {
+                li.style.display = "none";
+            }
+        });
+    }
+
+    function renderTabLimpieza(rebuild = true) {
+        if (rebuild || !deadCodesList) {
+            const cb = obtenerCodebookGlobal();
+            const todosLosTitulos = [];
+            ["dom", "cat", "cod"].forEach(key => {
+                if (cb[key]) {
+                    todosLosTitulos.push(...cb[key]);
+                }
+            });
+            const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
+            const rootNode = construirArbolCodigos(codeMapGlobal);
+            
+            deadCodesList = recolectarCodigosMuertos(rootNode, []);
+            const totalHojas = contarHojasTotales(rootNode);
+            const conCitas = Math.max(0, totalHojas - deadCodesList.length);
+            
+            summaryLimpiezaBanner.innerHTML = `
+                <div class="cn-summary-stat">📊 <span>Total códigos hoja: <strong>${totalHojas}</strong></span></div>
+                <div style="border-left: 1px solid rgba(147,161,161,0.25); height: 16px;"></div>
+                <div class="cn-summary-stat">✅ <span>Con citas: <strong style="color: #2aa198;">${conCitas}</strong></span></div>
+                <div style="border-left: 1px solid rgba(147,161,161,0.25); height: 16px;"></div>
+                <div class="cn-summary-stat">❌ <span>Sin citas (muertos): <strong style="color: #dc322f;">${deadCodesList.length}</strong></span></div>
+            `;
+        }
+        
+        listLimpiezaContainer.innerHTML = "";
+        
+        if (deadCodesList.length === 0) {
+            listLimpiezaContainer.innerHTML = `
+                <div style="padding: 30px; text-align: center; color: var(--sol-base01); font-size: 14px;">
+                    🎉 <strong>¡Codebook limpio!</strong> No se encontraron códigos muertos de último nivel sin citas.
+                </div>
+            `;
+            return;
+        }
+        
+        const rootUl = document.createElement("ul");
+        rootUl.style.paddingLeft = "0";
+        rootUl.style.margin = "0";
+        
+        deadCodesList.forEach(item => {
+            const li = document.createElement("li");
+            li.style.listStyleType = "none";
+            li.className = "node-row";
+            li.style.display = "flex";
+            li.style.alignItems = "center";
+            li.style.padding = "6px 12px";
+            li.style.fontSize = "13px";
+            
+            const chk = document.createElement("input");
+            chk.type = "checkbox";
+            chk.checked = !!item.checked;
+            chk.style.marginRight = "10px";
+            chk.style.cursor = "pointer";
+            chk.onchange = () => {
+                item.checked = chk.checked;
+            };
+            
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "col-code";
+            nameSpan.style.fontWeight = "600";
+            nameSpan.style.color = "var(--sol-base02)";
+            nameSpan.innerText = item.fullName;
+            
+            const parentSpan = document.createElement("span");
+            parentSpan.className = "col-sources";
+            parentSpan.style.width = "220px";
+            parentSpan.style.flexShrink = "0";
+            parentSpan.innerHTML = `<span class="cuali-tag" style="background-color: rgba(108, 113, 196, 0.08); color: #6c71c4;">${item.parentNamespace}</span>`;
+            
+            const actionsSpan = document.createElement("span");
+            actionsSpan.style.width = "90px";
+            actionsSpan.style.display = "flex";
+            actionsSpan.style.gap = "6px";
+            actionsSpan.style.justifyContent = "center";
+            actionsSpan.style.flexShrink = "0";
+            
+            const goBtn = document.createElement("button");
+            goBtn.className = "cuali-btn cuali-go-btn";
+            goBtn.style.padding = "2px 6px";
+            goBtn.style.fontSize = "11px";
+            goBtn.innerText = "↗";
+            goBtn.title = "Navegar a la página en Roam";
+            goBtn.onclick = (e) => {
+                e.preventDefault();
+                const pageUid = obtenerUIDPaginaPorTitulo(item.fullName);
+                if (pageUid) {
+                    window.roamAlphaAPI.ui.mainWindow.openPage({ page: { uid: pageUid } });
+                    document.body.removeChild(overlay);
+                } else {
+                    mostrarNotificacion("La página no existe aún en Roam.");
+                }
+            };
+            
+            const delBtn = document.createElement("button");
+            delBtn.className = "cuali-btn cuali-btn-tool";
+            delBtn.style.padding = "2px 6px";
+            delBtn.style.fontSize = "11px";
+            delBtn.innerText = "🗑️";
+            delBtn.title = "Eliminar este código";
+            delBtn.onclick = (e) => {
+                e.preventDefault();
+                mostrarModalGestion([item], "limpieza", () => {
+                    renderTabLimpieza(true);
+                });
+            };
+            
+            actionsSpan.appendChild(goBtn);
+            actionsSpan.appendChild(delBtn);
+            
+            li.appendChild(chk);
+            li.appendChild(nameSpan);
+            li.appendChild(parentSpan);
+            li.appendChild(actionsSpan);
+            
+            rootUl.appendChild(li);
+        });
+        
+        listLimpiezaContainer.appendChild(rootUl);
+        
+        if (searchLimpiezaInput.value) {
+            filtrarLimpieza(listLimpiezaContainer, searchLimpiezaInput.value);
+        }
+    }
+
     // Initial Render of Global Tabs
     renderTabCasos();
     renderTabCodebook();
     renderTabMemos();
     renderTabCategorias();
     renderTabConfiguracion();
+    renderTabLimpieza();
 
     modal.appendChild(tabExportacion);
     modal.appendChild(tabCasos);
     modal.appendChild(tabCodebook);
     modal.appendChild(tabCategorias);
     modal.appendChild(tabConfiguracion);
+    modal.appendChild(tabLimpieza);
     modal.appendChild(tabMemos);
 
     // Cancel Button at the very bottom (global for the modal)
@@ -4067,6 +4451,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         { btn: btnTabCodebook, content: tabCodebook, controls: controlsCodebook },
         { btn: btnTabCategorias, content: tabCategorias, controls: controlsCategorias },
         { btn: btnTabConfiguracion, content: tabConfiguracion, controls: controlsConfiguracion },
+        { btn: btnTabLimpieza, content: tabLimpieza, controls: controlsLimpieza },
         { btn: btnTabMemos, content: tabMemos, controls: controlsMemos }
     ];
 

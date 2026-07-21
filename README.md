@@ -79,6 +79,13 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
   * Atributo `Sincronizar jerarquía:: Sí/No` (por defecto: Sí).
   * Atributo `Prefijos a sincronizar:: cod, dim, cat` (por defecto: `cod, dim, cat`).
 
+### 7. 🧹 Limpieza de Códigos Muertos (v0.13.0)
+* **Detección Automática de Hojas Sin Citas:** Identifica únicamente códigos de último nivel (nodos hoja) que carecen de citas registradas en ninguna entrevista activa, preservando la jerarquía de los códigos padre/agrupadores.
+* **Banner de Salud del Codebook:** Presenta estadísticas clave (Total códigos hoja, Con citas y Sin citas) para una rápida evaluación del estado de higienización del grafo.
+* **Visualización con Contexto de Namespace:** Renderiza los códigos muertos acompañados del badge de su namespace padre (ej. `cod/afect`), facilitando su identificación analítica.
+* **Acciones Masivas y Copia:** Permite seleccionar códigos individual o masivamente para su eliminación auditable (`🗑️`), o copiar la lista plana al portapapeles (`📋 Copiar lista`).
+* **Navegación Interactiva:** Botón `↗` por fila para navegar directamente a la página del código en Roam Research antes de decidir su borrado.
+
 ---
 
 ## 🛠️ Instalación y Uso en Roam Research

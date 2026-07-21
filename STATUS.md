@@ -1,7 +1,6 @@
 # Estado del Proyecto (STATUS)
  
-## Fase Actual: Namespaces Dinámicos `codebook/` y Depuración de `dim/` (V 0.13.0)
-
+- [x] **Pestaña de Limpieza de Códigos Muertos (v0.13.0):** Implementada la pestaña dedicada "Limpieza" para detectar y depurar códigos de último nivel (hojas) que carecen de citas en entrevistas activas. Incluye un banner con resumen de salud del codebook, visualización con namespace padre, filtrado en tiempo real, selección masiva, copia de lista al portapapeles, navegación rápida (`↗`) y eliminación auditable individual/masiva (`🗑️`).
 - [x] **Namespaces Dinámicos e Inteligentes (`codebook/`):** Se reorganizó la estructura de exportación de páginas consolidadas en Roam bajo la raíz `codebook/` (`codebook/entrevistas`, `codebook/casos`, `codebook/códigos` y `codebook/categorías`). El sufijo del título se genera dinámicamente según la selección en el árbol (ej: `afect_norm` para 2-3 ítems, `afect_norm_y_mas` para 4 o más, o el nombre del padre si está 100% seleccionado).
 - [x] **Renombramiento de Botón de Exportación:** Se renombraron los botones `"Crear nueva página"` por **`"Generar reporte"`** en todas las pestañas para mayor claridad de la acción.
 - [x] **Depuración de la Dimensión `dim/`:** Se eliminó por completo el soporte y la lógica de recolección, aplanamiento y filtrado de la dimensión `dim/` en todo el codebase (`src/api`, `src/core`, `src/ui`).
