@@ -1,10 +1,20 @@
-# Walkthrough: Notas Informativas + Gestión de Eliminación de Categorías (v0.8.0)
+# Walkthrough: Aplanamiento de Árbol y Corrección de Búsqueda por Slash (v0.12.1)
 
-Hemos implementado con éxito dos grandes funcionalidades en CualiNemesis: notas explicativas sobre el origen de los datos en cada pestaña, y un sistema para desenlazar o eliminar categorías seleccionadas de forma masiva, segura y completamente auditable en Roam.
+Hemos implementado el aplanamiento del primer nivel en la construcción de los árboles de códigos y la solución al filtrado por `/` en los buscadores.
 
 ---
 
 ## Cambios Realizados
+
+### 1. Aplanamiento de Árboles con Prefijos (`src/core/extractor.js`)
+Se modificó la función `construirArbolCodigos`:
+- Fusiona automáticamente las dos primeras partes de la ruta de códigos para prefijos conocidos (`cod/`, `cat/`, `dim/`, `dom/`, `memos/` y prefijos de casos configurados).
+- Evita la creación de carpetas raíz únicas y redundantes como `cod/`, mostrando directamente los códigos de primer nivel como `cod/tema`.
+- Mantiene la jerarquía para subniveles profundos (`cod/tema` → `subtema`).
+
+### 2. Corrección de Búsqueda por Barra (`/`)
+- Al contener el texto del nodo directamente la etiqueta `cod/tema`, la propiedad `innerText` del elemento DOM ahora incluye la barra `/`.
+- El filtro dinámico `filtrarArbolDOM` localiza correctamente las coincidencias cuando se escribe `/` o `cod/`.
 
 ### 1. Notas Informativas por Pestaña
 Se agregaron contenedores `.cn-info-note` debajo de la barra de herramientas de cada pestaña en [modal.js](file:///c:/Users/redk8/OneDrive/Documentos/proyectosVibeCoding/proyectosRoamEnhance/cualiNemesis/src/ui/modal.js) con descripciones precisas:

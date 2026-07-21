@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-20 19:29:25
+﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-21 00:09:37
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -1179,7 +1179,26 @@ function construirArbolCodigos(codeMap) {
     const root = new TreeNode("root");
     
     for (const [codePath, uids] of Object.entries(codeMap)) {
-        const parts = codePath.split('/');
+        const originalParts = codePath.split('/');
+        let parts = [];
+        
+        const prefixesToFlatten = ["cod", "cat", "dim", "dom", "memos"];
+        try {
+            if (typeof obtenerConfiguracionPlugin === 'function') {
+                const config = obtenerConfiguracionPlugin();
+                if (config && config.prefijoCasos) {
+                    prefixesToFlatten.push(config.prefijoCasos.toLowerCase());
+                }
+            }
+        } catch (e) {}
+
+        if (originalParts.length >= 2 && prefixesToFlatten.includes(originalParts[0].toLowerCase())) {
+            parts.push(originalParts[0] + '/' + originalParts[1]);
+            parts.push(...originalParts.slice(2));
+        } else {
+            parts = originalParts;
+        }
+        
         let current = root;
         let runningPath = "";
         
