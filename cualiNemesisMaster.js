@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.13.0 - Last Updated: 2026-07-21 15:38:01
+﻿// CualiNemesis v0.13.1 - Last Updated: 2026-07-21 16:03:15
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -1617,6 +1617,65 @@ function abrirPaginaPorTitulo(title) {
     }, 100);
 }
 
+function minimizarPanelCualiNemesis() {
+    const overlay = document.getElementById("extractor-cualitativo-overlay");
+    if (overlay) {
+        overlay.style.display = "none";
+    }
+
+    let minBtn = document.getElementById("cuali-nemesis-minimized-btn");
+    if (!minBtn) {
+        minBtn = document.createElement("button");
+        minBtn.id = "cuali-nemesis-minimized-btn";
+        minBtn.innerHTML = "⚡ Restaurar CualiNemesis";
+        minBtn.title = "Haga clic para restaurar el panel de CualiNemesis";
+        minBtn.style.position = "fixed";
+        minBtn.style.bottom = "20px";
+        minBtn.style.right = "20px";
+        minBtn.style.zIndex = "999999";
+        minBtn.style.backgroundColor = "#268bd2";
+        minBtn.style.color = "#ffffff";
+        minBtn.style.border = "none";
+        minBtn.style.borderRadius = "20px";
+        minBtn.style.padding = "8px 16px";
+        minBtn.style.fontSize = "13px";
+        minBtn.style.fontWeight = "600";
+        minBtn.style.boxShadow = "0 4px 14px rgba(0, 0, 0, 0.25)";
+        minBtn.style.cursor = "pointer";
+        minBtn.style.transition = "transform 0.2s ease, background-color 0.2s ease";
+
+        minBtn.onmouseenter = () => {
+            minBtn.style.transform = "scale(1.05)";
+            minBtn.style.backgroundColor = "#2aa198";
+        };
+        minBtn.onmouseleave = () => {
+            minBtn.style.transform = "scale(1)";
+            minBtn.style.backgroundColor = "#268bd2";
+        };
+
+        minBtn.onclick = (e) => {
+            e.preventDefault();
+            restaurarPanelCualiNemesis();
+        };
+
+        document.body.appendChild(minBtn);
+    } else {
+        minBtn.style.display = "block";
+    }
+}
+
+function restaurarPanelCualiNemesis() {
+    const overlay = document.getElementById("extractor-cualitativo-overlay");
+    if (overlay) {
+        overlay.style.display = "flex";
+    }
+    const minBtn = document.getElementById("cuali-nemesis-minimized-btn");
+    if (minBtn) {
+        minBtn.style.display = "none";
+    }
+}
+
+
 function getAggregateCites(node) {
     let count = node.cites.length;
     for (const childName in node.children) {
@@ -2126,10 +2185,7 @@ function renderNodeHTML(node, hideSources = false, depth = 0) {
     goBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const overlay = document.getElementById("extractor-cualitativo-overlay");
-        if (overlay) {
-            document.body.removeChild(overlay);
-        }
+        minimizarPanelCualiNemesis();
         abrirPaginaPorTitulo(node.fullName);
     };
     headerDiv.appendChild(goBtn);
@@ -2282,10 +2338,7 @@ function renderCodebookNodeHTML(node) {
     goBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const overlay = document.getElementById("extractor-cualitativo-overlay");
-        if (overlay) {
-            document.body.removeChild(overlay);
-        }
+        minimizarPanelCualiNemesis();
         abrirPaginaPorTitulo(node.fullName);
     };
     headerDiv.appendChild(goBtn);
@@ -2383,10 +2436,7 @@ function renderMemoNodeHTML(node, memoContentMap) {
         goBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const overlay = document.getElementById("extractor-cualitativo-overlay");
-            if (overlay) {
-                document.body.removeChild(overlay);
-            }
+            minimizarPanelCualiNemesis();
             abrirPaginaPorTitulo(node.fullName);
         };
         colMemoDiv.appendChild(goBtn);
@@ -2427,10 +2477,7 @@ function renderMemoNodeHTML(node, memoContentMap) {
             badge.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const overlay = document.getElementById("extractor-cualitativo-overlay");
-                if (overlay) {
-                    document.body.removeChild(overlay);
-                }
+                minimizarPanelCualiNemesis();
                 abrirPaginaPorTitulo(codeTitle);
             };
             badgesContainer.appendChild(badge);
@@ -2584,10 +2631,7 @@ function renderCategoryNodeHTML(node, depth = 0) {
         goBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const overlay = document.getElementById("extractor-cualitativo-overlay");
-            if (overlay) {
-                document.body.removeChild(overlay);
-            }
+            minimizarPanelCualiNemesis();
             abrirPaginaPorTitulo(node.fullName);
         };
         headerDiv.appendChild(goBtn);
@@ -2605,10 +2649,7 @@ function renderCategoryNodeHTML(node, depth = 0) {
         goBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const overlay = document.getElementById("extractor-cualitativo-overlay");
-            if (overlay) {
-                document.body.removeChild(overlay);
-            }
+            minimizarPanelCualiNemesis();
             abrirPaginaPorTitulo(node.fullName);
         };
         headerDiv.appendChild(goBtn);
@@ -2854,10 +2895,7 @@ function renderCasoNodeHTML(node, isCase = false, depth = 0) {
     goBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const overlay = document.getElementById("extractor-cualitativo-overlay");
-        if (overlay) {
-            document.body.removeChild(overlay);
-        }
+        minimizarPanelCualiNemesis();
         abrirPaginaPorTitulo(node.fullName);
     };
 
@@ -3049,6 +3087,15 @@ function seleccionarNodosFiltrados(container, query, rootNodeObj) {
 }
 
 function crearInterfazModal(rootNode, pageTitle, pageUid) {
+    const existingOverlay = document.getElementById("extractor-cualitativo-overlay");
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+    const existingMinBtn = document.getElementById("cuali-nemesis-minimized-btn");
+    if (existingMinBtn) {
+        existingMinBtn.remove();
+    }
+
     const config = obtenerConfiguracionPlugin();
     let codebookTreeRoot = null;
     let casosTreeRoot = null;
@@ -3925,10 +3972,35 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     const modal = document.createElement("div");
     modal.className = "cuali-modal";
     
+    const headerContainer = document.createElement("div");
+    headerContainer.style.display = "flex";
+    headerContainer.style.justifyContent = "space-between";
+    headerContainer.style.alignItems = "center";
+    headerContainer.style.borderBottom = "1px solid rgba(147, 161, 161, 0.2)";
+    headerContainer.style.marginBottom = "8px";
+    headerContainer.style.paddingBottom = "6px";
+
     const header = document.createElement("h3");
     header.className = "cuali-header";
+    header.style.marginBottom = "0";
+    header.style.borderBottom = "none";
+    header.style.paddingBottom = "0";
     header.innerText = "Dispositivo Analítico: CualiNemesis";
-    modal.appendChild(header);
+    headerContainer.appendChild(header);
+
+    const btnMinimizeHeader = document.createElement("button");
+    btnMinimizeHeader.className = "cuali-btn";
+    btnMinimizeHeader.style.padding = "4px 10px";
+    btnMinimizeHeader.style.fontSize = "12px";
+    btnMinimizeHeader.innerText = "🗕 Minimizar";
+    btnMinimizeHeader.title = "Minimizar panel";
+    btnMinimizeHeader.onclick = (e) => {
+        e.preventDefault();
+        minimizarPanelCualiNemesis();
+    };
+    headerContainer.appendChild(btnMinimizeHeader);
+
+    modal.appendChild(headerContainer);
 
     // Build Tabs Navigation
     const tabsNav = document.createElement("div");
@@ -5935,7 +6007,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                 const pageUid = obtenerUIDPaginaPorTitulo(item.fullName);
                 if (pageUid) {
                     window.roamAlphaAPI.ui.mainWindow.openPage({ page: { uid: pageUid } });
-                    document.body.removeChild(overlay);
+                    minimizarPanelCualiNemesis();
                 } else {
                     mostrarNotificacion("La página no existe aún en Roam.");
                 }
@@ -5999,6 +6071,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     btnCancelGlobal.innerText = "Cerrar Panel";
     btnCancelGlobal.onclick = (e) => {
         e.preventDefault();
+        const minBtn = document.getElementById("cuali-nemesis-minimized-btn");
+        if (minBtn) minBtn.remove();
         document.body.removeChild(overlay);
     };
     globalFooter.appendChild(btnCancelGlobal);

@@ -86,6 +86,11 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Acciones Masivas y Copia:** Permite seleccionar códigos individual o masivamente para su eliminación auditable (`🗑️`), o copiar la lista plana al portapapeles (`📋 Copiar lista`).
 * **Navegación Interactiva:** Botón `↗` por fila para navegar directamente a la página del código en Roam Research antes de decidir su borrado.
 
+### 8. 🗕 Minimizado Automático y Restauración (v0.13.1)
+* **Preservación del Estado:** Al hacer clic en cualquier enlace de navegación (`↗` o badges de memos), el panel analítico ya no se destruye. En su lugar, se oculta temporalmente conservando todo tu trabajo y estado actual.
+* **Botón Flotante de Restauración:** Muestra un botón flotante dinámico (`⚡ Restaurar CualiNemesis`) en la esquina inferior derecha para volver al panel con un solo clic.
+* **Minimizado Manual:** Botón dedicado `🗕 Minimizar` en la cabecera superior del modal.
+
 ---
 
 ## 🛠️ Instalación y Uso en Roam Research
