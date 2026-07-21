@@ -296,9 +296,46 @@ async function crearBloquesRecursivo(node, parentUid, order, numAbove = 0, numBe
     }
 }
 
-async function generarPaginaConsolidadaArbol(originalTitle, rootNode, numAbove = 0, numBelow = 0, plainText = false) {
+function generarNombreDinamico(basePath, rootNode) {
+    let seleccionados = [];
+
+    function traverse(node) {
+        if (!node) return;
+        if (node.name === "root") {
+            if (node.children) {
+                Object.keys(node.children).sort().forEach(k => traverse(node.children[k]));
+            }
+            return;
+        }
+
+        if (node.checked) {
+            let nombreLimpio = node.name ? node.name.replace(/^(cod|cat|dom)\//, "") : "";
+            if (nombreLimpio.includes("/")) {
+                let parts = nombreLimpio.split("/");
+                nombreLimpio = parts[parts.length - 1];
+            }
+            if (nombreLimpio) {
+                seleccionados.push(nombreLimpio);
+            }
+        } else if (node.children) {
+            Object.keys(node.children).sort().forEach(k => traverse(node.children[k]));
+        }
+    }
+
+    traverse(rootNode);
+
+    let sufijo = "";
+    if (seleccionados.length === 0) return basePath;
+    if (seleccionados.length === 1) sufijo = seleccionados[0];
+    else if (seleccionados.length <= 3) sufijo = seleccionados.join("_");
+    else sufijo = seleccionados.slice(0, 2).join("_") + "_y_mas";
+
+    return `${basePath}/${sufijo}`;
+}
+
+async function generarPaginaConsolidadaArbol(namespacePath, rootNode, numAbove = 0, numBelow = 0, plainText = false) {
     const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-    const newTitle = `Consolidado: ${originalTitle} (${timestamp})`;
+    const newTitle = `${namespacePath}/${timestamp}`;
     const newPageUid = window.roamAlphaAPI.util.generateUID();
     
     window.roamAlphaAPI.createPage({page: {title: newTitle, uid: newPageUid}});
@@ -329,7 +366,7 @@ function obtenerConfiguracionPlugin() {
         prefijoCasos: "entrevistadx",
         sufijoAnalisis: "transcripción/a analizar",
         sincronizarJerarquia: true,
-        prefijosSincronizacion: ["cod", "dim", "cat"]
+        prefijosSincronizacion: ["cod", "cat"]
     };
 
     const configPageUid = obtenerUIDPaginaPorTitulo("cualiNemesis/Configuración");
@@ -503,7 +540,6 @@ function obtenerCodebookGlobal() {
     
     const grouped = {
         "dom": [],
-        "dim": [],
         "cat": [],
         "cod": [],
         "memo": []
@@ -511,7 +547,6 @@ function obtenerCodebookGlobal() {
     
     allTitles.forEach(title => {
         if (title.startsWith("dom/")) grouped["dom"].push(title);
-        else if (title.startsWith("dim/")) grouped["dim"].push(title);
         else if (title.startsWith("cat/")) grouped["cat"].push(title);
         else if (title.startsWith("cod/")) grouped["cod"].push(title);
         else if (title.startsWith("memo/")) grouped["memo"].push(title);
@@ -582,7 +617,7 @@ async function sincronizarJerarquiaRoam() {
 
     // 1. Obtener todos los títulos para construir el árbol global
     const todosLosTitulos = [];
-    ["dom", "dim", "cat", "cod"].forEach(key => {
+    ["dom", "cat", "cod"].forEach(key => {
         if (cb[key]) {
             todosLosTitulos.push(...cb[key]);
         }
@@ -611,7 +646,7 @@ async function sincronizarJerarquiaRoam() {
         const parts = prefix.split('/');
         let groupName = parts[0];
 
-        const prefixesToFlatten = ["cod", "cat", "dim", "dom", "memos"];
+        const prefixesToFlatten = ["cod", "cat", "dom", "memos"];
         try {
             if (typeof obtenerConfiguracionPlugin === 'function') {
                 const configPlugin = obtenerConfiguracionPlugin();

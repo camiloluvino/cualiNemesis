@@ -2622,7 +2622,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     
     const btnPage = document.createElement("button");
     btnPage.className = "cuali-btn cuali-btn-page";
-    btnPage.innerText = "Crear nueva página";
+    btnPage.innerText = "Generar reporte";
     btnPage.onclick = async (e) => {
         e.preventDefault();
         if (searchExportInput.value.trim() !== "") {
@@ -2633,7 +2633,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol(pageTitle, rootNode, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
+        const dynamicPath = generarNombreDinamico(`codebook/entrevistas/${pageTitle}`, rootNode);
+        await generarPaginaConsolidadaArbol(dynamicPath, rootNode, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
     };
 
     exportButtons.appendChild(btnClipboard);
@@ -2833,7 +2834,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     
     const btnCasosPage = document.createElement("button");
     btnCasosPage.className = "cuali-btn cuali-btn-page";
-    btnCasosPage.innerText = "Crear nueva página";
+    btnCasosPage.innerText = "Generar reporte";
     btnCasosPage.onclick = async (e) => {
         e.preventDefault();
         if (searchCasosInput.value.trim() !== "") {
@@ -2844,7 +2845,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol("Casos Consolidados", casosTreeRoot, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
+        const dynamicPath = generarNombreDinamico("codebook/casos", casosTreeRoot);
+        await generarPaginaConsolidadaArbol(dynamicPath, casosTreeRoot, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
     };
 
     casosButtons.appendChild(btnCasosClipboard);
@@ -2878,7 +2880,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         
         const cb = obtenerCodebookGlobal();
         const todosLosTitulos = [];
-        ["dom", "dim", "cat", "cod"].forEach(key => {
+        ["dom", "cat", "cod"].forEach(key => {
             todosLosTitulos.push(...cb[key]);
         });
         const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);
@@ -3223,7 +3225,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const infoNoteCodebook = document.createElement("div");
     infoNoteCodebook.className = "cn-info-note";
-    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>dim/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>${config.prefijoCasos}/.../${config.sufijoAnalisis}</code>).</em>`;
+    infoNoteCodebook.innerHTML = `ℹ️ <em>Codebook global construido a partir de las páginas del grafo con prefijos cualitativos reconocidos: <code>dom/</code>, <code>cat/</code> y <code>cod/</code>. Las citas se contabilizan únicamente desde páginas de transcripción (<code>${config.prefijoCasos}/.../${config.sufijoAnalisis}</code>).</em>`;
 
     tabCodebook.appendChild(searchCodebookInput);
     tabCodebook.appendChild(tableHeaderCodebook);
@@ -3257,7 +3259,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
     
     const btnCodebookPage = document.createElement("button");
     btnCodebookPage.className = "cuali-btn cuali-btn-page";
-    btnCodebookPage.innerText = "Crear nueva página";
+    btnCodebookPage.innerText = "Generar reporte";
     btnCodebookPage.onclick = async (e) => {
         e.preventDefault();
         if (searchCodebookInput.value.trim() !== "") {
@@ -3268,7 +3270,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol("Codebook Global", codebookTreeRoot, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
+        const dynamicPath = generarNombreDinamico("codebook/códigos", codebookTreeRoot);
+        await generarPaginaConsolidadaArbol(dynamicPath, codebookTreeRoot, numBloquesArriba, numBloquesAbajo, exportarTextoPlano);
     };
 
     codebookButtons.appendChild(btnCodebookClipboard);
@@ -3551,7 +3554,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     const btnCategoriasPage = document.createElement("button");
     btnCategoriasPage.className = "cuali-btn cuali-btn-primary";
-    btnCategoriasPage.innerText = "📄 Crear página consolidada";
+    btnCategoriasPage.innerText = "Generar reporte";
     btnCategoriasPage.onclick = async (e) => {
         e.preventDefault();
         if (searchCategoriasInput.value.trim() !== "") {
@@ -3562,7 +3565,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
             return;
         }
         document.body.removeChild(overlay);
-        await generarPaginaConsolidadaArbol("Categorías Analíticas", categoriasTreeRoot,
+        const dynamicPath = generarNombreDinamico("codebook/categorías", categoriasTreeRoot);
+        await generarPaginaConsolidadaArbol(dynamicPath, categoriasTreeRoot,
             0,
             0,
             false
@@ -3751,7 +3755,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         if (rebuild || !codebookTreeRoot) {
             const cb = obtenerCodebookGlobal();
             const todosLosTitulos = [];
-            ["dom", "dim", "cat", "cod"].forEach(key => {
+            ["dom", "cat", "cod"].forEach(key => {
                 todosLosTitulos.push(...cb[key]);
             });
             const codeMapGlobal = obtenerReferenciasDeCodigos(todosLosTitulos);

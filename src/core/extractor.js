@@ -36,7 +36,7 @@ function construirArbolCodigos(codeMap) {
         const originalParts = codePath.split('/');
         let parts = [];
         
-        const prefixesToFlatten = ["cod", "cat", "dim", "dom", "memos"];
+        const prefixesToFlatten = ["cod", "cat", "dom", "memos"];
         try {
             if (typeof obtenerConfiguracionPlugin === 'function') {
                 const config = obtenerConfiguracionPlugin();

@@ -15,7 +15,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * Renderiza los códigos en una estructura de tabla de árbol (TreeTable) interactiva con checkboxes en cascada (marcado, desmarcado y estado indeterminado) y columnas dedicadas para el **Código** y la cantidad de **Citas**. La columna de fuentes se oculta automáticamente por estar dentro del contexto de una única entrevista.
 * **Exportación dual:**
   * **Copiar al portapapeles:** Genera un texto con tabulaciones listas para pegar en cualquier página de Roam conservando la jerarquía.
-  * **Crear nueva página:** Crea automáticamente una página consolidada en Roam con referencias dinámicas de bloques `((UID))` organizados jerárquicamente.
+  * **Generar reporte:** Crea automáticamente una página organizada bajo el namespace `codebook/entrevistas/...` en Roam con los nombres de los ítems seleccionados y referencias dinámicas de bloques `((UID))` organizados jerárquicamente.
 * **Buscador interactivo con selección transversal:**
   * Filtra códigos y citas en tiempo real.
   * **Auto-selección al exportar:** Si hay texto en el buscador al hacer clic en exportar (Copiar/Crear página), se seleccionan automáticamente solo los nodos coincidentes de forma transversal.
@@ -27,14 +27,14 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Agrupación por Caso:** Agrupa todas las categorías y códigos cualitativos jerárquicamente bajo su respectivo caso, permitiendo ver de manera detallada qué códigos han sido aplicados a qué entrevistado y cuántas citas tienen.
 * **Exportación y selección masiva:**
   * **Copiar al portapapeles:** Copia los casos y códigos seleccionados respetando la jerarquía para pegar directamente en Roam.
-  * **Crear nueva página:** Genera una página consolidada en Roam con las referencias de los bloques asociados.
+  * **Generar reporte:** Genera una página consolidada bajo el namespace `codebook/casos/...` en Roam con las referencias de los bloques asociados.
   * **Auto-selección al exportar:** Al exportar con un término de búsqueda activo, pre-selecciona automáticamente los nodos que coinciden con el filtro de forma transversal.
   * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (☑*), además de un buscador desplegable (🔍).
 * **Navegación Rápida:** Botón discreto `↗️` (visible en hover) que abre instantáneamente el caso o código seleccionado en la interfaz principal de Roam y cierra el panel.
 * Buscador integrado en tiempo real para filtrar casos y códigos simultáneamente.
 
 ### 3. 🗺️ Codificación (Codebook Global)
-* Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Dimensiones (`dim/`), Categorías (`cat/`) y Códigos (`cod/`).
+* Muestra el mapa de códigos del proyecto agrupado en namespaces jerárquicos: Dominios (`dom/`), Categorías (`cat/`) y Códigos (`cod/`).
 * Renderiza el Codebook global en una estructura de tabla de árbol (TreeTable) interactiva con checkboxes en cascada y tres columnas: **Código**, **Citas** (cantidad total de citas asociadas) y **Fuentes** (entrevistados vinculados).
 * **Pivote Híbrido por Fuentes (v0.7.0):**
   * **Selector de Nivel Global:** Permite agrupar el árbol cualitativo completo por fuentes a una profundidad específica (`Nivel 1`, `Nivel 2`, `Nivel 3`, `Nivel 4`) o de forma inteligente recursiva (`Automático`).
@@ -45,7 +45,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
   * **Especificidad en hoja:** Las etiquetas de fuentes se muestran únicamente en los códigos del último nivel jerárquico (nodos hoja) para no saturar las categorías y carpetas padre.
 * **Extracción global y selección inteligente:**
   * **Copiar al portapapeles:** Copia los códigos seleccionados y sus citas en formato árbol.
-  * **Crear nueva página:** Genera una página consolidada en Roam con referencias de bloque de todo el grafo para los códigos seleccionados.
+  * **Generar reporte:** Genera una página consolidada bajo el namespace `codebook/códigos/...` en Roam con referencias de bloque de todo el grafo para los códigos seleccionados.
   * **Auto-selección al exportar:** Pre-selecciona de manera inteligente los nodos coincidentes con la búsqueda al usar cualquiera de los botones de exportación.
   * **Herramientas de selección masiva (Toolbar):** Botones `Expandir todo` (⊞), `Colapsar todo` (⊟), `Seleccionar todo` (☑), `Deseleccionar todo` (☐) y `Seleccionar filtrados` (☑*), además de un buscador desplegable (🔍) y refresco de caché (🔄).
 * **Navegación Rápida:** Botón discreto `↗️` en cada nodo (visible en hover) para ir a la página de ese código directamente.
@@ -55,7 +55,7 @@ CualiNemesis cuenta con un panel analítico dividido en tres pestañas optimizad
 * **Separación Conceptual:** Aísla el namespace `memo/` en su propia pestaña dedicada, retirándolos de las pestañas de codificación analítica para mantener flujos metodológicos limpios.
 * **Renderizado Jerárquico:** Muestra la estructura jerárquica organizativa de los memos (por ejemplo: `memo/caso`, `memo/dimensiones`, etc.) en un árbol interactivo.
 * **Preview en Tiempo Real:** Visualiza directamente los primeros bloques de texto de la página del memo, permitiendo leer reflexiones conceptuales sin salir del panel.
-* **Mapeo de Códigos Vinculados:** Detecta referencias a códigos cualitativos (`[[cod/...]]`, `[[dim/...]]`, etc.) en el texto del memo y las renderiza como etiquetas (badges) compactos e interactivos en una columna dedicada.
+* **Mapeo de Códigos Vinculados:** Detecta referencias a códigos cualitativos (`[[cod/...]]`, `[[cat/...]]`, etc.) en el texto del memo y las renderiza como etiquetas (badges) compactos e interactivos en una columna dedicada.
 * **Navegación Interactiva:** 
   - El botón `↗` en la fila del memo navega instantáneamente a su página de reflexiones y cierra el modal.
   - Al hacer clic en cualquier badge de código vinculado, el modal se cierra y te posiciona directamente en la página de dicho código en Roam.
