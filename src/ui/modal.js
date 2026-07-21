@@ -3139,132 +3139,114 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
         });
     };
 
-    smartGroupingContainer = document.createElement("label");
-    smartGroupingContainer.style.display = "flex";
-    smartGroupingContainer.style.alignItems = "center";
-    smartGroupingContainer.style.gap = "4px";
-    smartGroupingContainer.style.fontSize = "12px";
-    smartGroupingContainer.style.cursor = "pointer";
-    smartGroupingContainer.style.marginLeft = "12px";
-    smartGroupingContainer.style.color = "var(--sol-base1)";
-    smartGroupingContainer.title = "No duplicar códigos compartidos por múltiples fuentes (mantenerlos al nivel del padre)";
-
-    const chkSmartGrouping = document.createElement("input");
-    chkSmartGrouping.type = "checkbox";
-    chkSmartGrouping.id = "cuali-smart-grouping";
-    chkSmartGrouping.style.cursor = "pointer";
-    chkSmartGrouping.onchange = () => {
-        noDuplicarCompartidos = chkSmartGrouping.checked;
-        if (arbolPivotado && codebookTreeRoot && codebookTreeRoot.originalState) {
-            codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
-            const levelVal = selectPivotLevel.value;
-            if (levelVal === "auto") {
-                for (const childName in codebookTreeRoot.children) {
-                    const child = codebookTreeRoot.children[childName];
-                    child.originalState = codebookTreeRoot.originalState.children[childName];
-                    pivotNode(child, true);
-                }
-            } else {
-                const depth = parseInt(levelVal, 10);
-                pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
-            }
-            renderTabCodebook(false);
-        }
-    };
-    
-    smartGroupingContainer.appendChild(chkSmartGrouping);
-    smartGroupingContainer.appendChild(document.createTextNode("No duplicar"));
+    // --- PANEL DE OPCIONES DE AGRUPACIÓN (PIVOTE) ---
+    const pivotOptionsPanel = document.createElement("div");
+    pivotOptionsPanel.id = "cuali-pivot-panel";
+    pivotOptionsPanel.style.display = "none";
+    pivotOptionsPanel.style.alignItems = "center";
+    pivotOptionsPanel.style.gap = "8px";
+    pivotOptionsPanel.style.marginLeft = "8px";
+    pivotOptionsPanel.style.padding = "2px 8px";
+    pivotOptionsPanel.style.borderRadius = "4px";
+    pivotOptionsPanel.style.backgroundColor = "var(--sol-base2)";
+    pivotOptionsPanel.style.border = "1px solid var(--sol-base1)";
 
     // Selector de nivel de pivote (Profundidad)
     const lblPivotLevel = document.createElement("span");
-    lblPivotLevel.innerText = "Nivel:";
-    lblPivotLevel.style.marginLeft = "12px";
+    lblPivotLevel.innerText = "Nivel de agrupación:";
     lblPivotLevel.style.fontSize = "12px";
-    lblPivotLevel.style.color = "var(--sol-base1)";
+    lblPivotLevel.style.color = "var(--sol-base00)";
+    lblPivotLevel.style.fontWeight = "500";
 
     const selectPivotLevel = document.createElement("select");
     selectPivotLevel.id = "cuali-pivot-level";
-    selectPivotLevel.style.marginLeft = "6px";
     selectPivotLevel.style.padding = "2px 6px";
     selectPivotLevel.style.borderRadius = "4px";
-    selectPivotLevel.style.border = "1px solid var(--sol-base2)";
+    selectPivotLevel.style.border = "1px solid var(--sol-base1)";
     selectPivotLevel.style.backgroundColor = "var(--sol-base3)";
     selectPivotLevel.style.color = "var(--sol-base00)";
     selectPivotLevel.style.fontSize = "12px";
     selectPivotLevel.style.cursor = "pointer";
-    
+
     const options = [
-        { value: "1", text: "Nivel 1" },
-        { value: "2", text: "Nivel 2" },
+        { value: "1", text: "Nivel 1 (Raíz)" },
+        { value: "2", text: "Nivel 2 (Subcódigos)" },
         { value: "3", text: "Nivel 3" },
-        { value: "4", text: "Nivel 4" },
-        { value: "auto", text: "Automático (Todos)" }
+        { value: "4", text: "Nivel 4" }
     ];
-    
+
     options.forEach(opt => {
         const option = document.createElement("option");
         option.value = opt.value;
         option.text = opt.text;
         selectPivotLevel.appendChild(option);
     });
+    // Nivel 2 seleccionado por defecto
+    selectPivotLevel.value = "2";
 
-    selectPivotLevel.onchange = () => {
-        if (arbolPivotado && codebookTreeRoot && codebookTreeRoot.originalState) {
-            codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
-            const levelVal = selectPivotLevel.value;
-            if (levelVal === "auto") {
-                for (const childName in codebookTreeRoot.children) {
-                    const child = codebookTreeRoot.children[childName];
-                    child.originalState = codebookTreeRoot.originalState.children[childName];
-                    pivotNode(child, true);
-                }
-            } else {
-                const depth = parseInt(levelVal, 10);
-                pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
-            }
-            renderTabCodebook(false);
-        }
+    const btnApplyPivot = document.createElement("button");
+    btnApplyPivot.className = "cuali-btn cuali-btn-primary";
+    btnApplyPivot.style.padding = "2px 8px";
+    btnApplyPivot.style.fontSize = "12px";
+    btnApplyPivot.innerText = "✅ Aplicar";
+    btnApplyPivot.onclick = (e) => {
+        e.preventDefault();
+        if (!codebookTreeRoot) return;
+
+        arbolPivotado = true;
+        codebookTreeRoot.originalState = cloneSubtree(codebookTreeRoot);
+        const depth = parseInt(selectPivotLevel.value, 10);
+        noDuplicarCompartidos = false;
+
+        pivotAtDepth(codebookTreeRoot, depth, 0, false);
+
+        pivotOptionsPanel.style.display = "none";
+        btnPivotGlobal.innerHTML = "📋 Restaurar";
+        btnPivotGlobal.style.backgroundColor = "var(--sol-blue)";
+        btnPivotGlobal.style.color = "white";
+        renderTabCodebook(false);
     };
 
-    // Botón para agrupar globalmente por fuentes (Pivote Global)
+    const btnCancelPivot = document.createElement("button");
+    btnCancelPivot.className = "cuali-btn-tool";
+    btnCancelPivot.style.padding = "2px 6px";
+    btnCancelPivot.style.fontSize = "12px";
+    btnCancelPivot.innerText = "❌";
+    btnCancelPivot.title = "Cancelar";
+    btnCancelPivot.onclick = (e) => {
+        e.preventDefault();
+        pivotOptionsPanel.style.display = "none";
+    };
+
+    pivotOptionsPanel.appendChild(lblPivotLevel);
+    pivotOptionsPanel.appendChild(selectPivotLevel);
+    pivotOptionsPanel.appendChild(btnApplyPivot);
+    pivotOptionsPanel.appendChild(btnCancelPivot);
+
+    // Botón principal para agrupar / restaurar
     const btnPivotGlobal = document.createElement("button");
     btnPivotGlobal.className = "cuali-btn-tool";
     btnPivotGlobal.style.marginLeft = "12px";
     btnPivotGlobal.style.fontWeight = "500";
-    btnPivotGlobal.innerHTML = "🗂️ Agrupar";
-    btnPivotGlobal.title = "Agrupar todo el árbol de códigos bajo sus respectivas fuentes";
+    btnPivotGlobal.innerHTML = "🗂️ Agrupar por fuentes";
+    btnPivotGlobal.title = "Agrupar el árbol de códigos bajo sus respectivas fuentes";
     btnPivotGlobal.onclick = (e) => {
         e.preventDefault();
-        arbolPivotado = !arbolPivotado;
         if (arbolPivotado) {
-            btnPivotGlobal.innerHTML = "📋 Restaurar";
-            btnPivotGlobal.style.backgroundColor = "var(--sol-blue)";
-            btnPivotGlobal.style.color = "white";
-            
-            if (codebookTreeRoot) {
-                codebookTreeRoot.originalState = cloneSubtree(codebookTreeRoot);
-                const levelVal = selectPivotLevel.value;
-                if (levelVal === "auto") {
-                    for (const childName in codebookTreeRoot.children) {
-                        const child = codebookTreeRoot.children[childName];
-                        child.originalState = codebookTreeRoot.originalState.children[childName];
-                        pivotNode(child, true);
-                    }
-                } else {
-                    const depth = parseInt(levelVal, 10);
-                    pivotAtDepth(codebookTreeRoot, depth, 0, noDuplicarCompartidos);
-                }
-            }
-            renderTabCodebook(false);
-        } else {
-            btnPivotGlobal.innerHTML = "🗂️ Agrupar";
+            // Restaurar a estado original
+            arbolPivotado = false;
+            btnPivotGlobal.innerHTML = "🗂️ Agrupar por fuentes";
             btnPivotGlobal.style.backgroundColor = "";
             btnPivotGlobal.style.color = "";
-            
+            pivotOptionsPanel.style.display = "none";
+
             if (codebookTreeRoot && codebookTreeRoot.originalState) {
                 codebookTreeRoot = cloneSubtree(codebookTreeRoot.originalState);
             }
             renderTabCodebook(false);
+        } else {
+            // Desplegar/ocultar panel de opciones de pivote
+            pivotOptionsPanel.style.display = pivotOptionsPanel.style.display === "none" ? "flex" : "none";
         }
     };
 
@@ -3291,9 +3273,7 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
 
     controlsCodebook.appendChild(btnGestionarCodebook);
     controlsCodebook.appendChild(btnPivotGlobal);
-    controlsCodebook.appendChild(smartGroupingContainer);
-    controlsCodebook.appendChild(lblPivotLevel);
-    controlsCodebook.appendChild(selectPivotLevel);
+    controlsCodebook.appendChild(pivotOptionsPanel);
     
     const sepCB1 = document.createElement("div");
     sepCB1.className = "cuali-toolbar-separator";
@@ -3889,7 +3869,8 @@ function crearInterfazModal(rootNode, pageTitle, pageUid) {
                     for (const childName in codebookTreeRoot.children) {
                         const child = codebookTreeRoot.children[childName];
                         child.originalState = codebookTreeRoot.originalState.children[childName];
-                        pivotNode(child, true);
+                        pivotNode(child, noDuplicarCompartidos);
+                        child.isIndividuallyPivoted = true;
                     }
                 } else {
                     const depth = parseInt(levelVal, 10);
