@@ -1,4 +1,4 @@
-﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-21 00:09:37
+﻿// CualiNemesis v0.12.0 - Last Updated: 2026-07-21 13:49:14
 
 // File: ui/notifications.js
 function mostrarNotificacion(mensaje) {
@@ -711,7 +711,22 @@ async function sincronizarJerarquiaRoam() {
     // 3. Iterar por cada prefijo a sincronizar
     for (const prefix of prefijos) {
         const parts = prefix.split('/');
-        const groupName = parts[0];
+        let groupName = parts[0];
+
+        const prefixesToFlatten = ["cod", "cat", "dim", "dom", "memos"];
+        try {
+            if (typeof obtenerConfiguracionPlugin === 'function') {
+                const configPlugin = obtenerConfiguracionPlugin();
+                if (configPlugin && configPlugin.prefijoCasos) {
+                    prefixesToFlatten.push(configPlugin.prefijoCasos.toLowerCase());
+                }
+            }
+        } catch (e) {}
+
+        if (parts.length >= 2 && prefixesToFlatten.includes(parts[0].toLowerCase())) {
+            groupName = parts[0] + '/' + parts[1];
+        }
+
         const groupNode = rootNode.children[groupName];
         if (!groupNode) continue;
 
